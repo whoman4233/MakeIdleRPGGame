@@ -38,4 +38,6 @@ public class PlayerStatsData : ScriptableObject
         if (level >= maxLevel) return 0f;
         return expCurve.Evaluate(level);
     }
+
+    public int TeamID;
 }

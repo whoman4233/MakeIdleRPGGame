@@ -1,120 +1,155 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
-[RequireComponent(typeof(Collider))]
 public class PlayerStats : MonoBehaviour, IAttackable
 {
-    [Header("Base Data (ScriptableObject)")]
-    public PlayerStatsData data;
+    public PlayerStatsData baseData;
 
-    [Header("Team")]
-    [SerializeField] private int teamId = 0; // 0 = 플레이어
-
-    [Header("Runtime Level & Exp")]
-    public int level;
-    public float curExp;
-    public float expToNextLevel;
-
-    [Header("Runtime Resources")]
     public float curHP;
-    public float curMP;
+    public float curExp;
+    public int level = 1;
+
+    private List<StatModifier> upgradeModifiers = new List<StatModifier>();
+    private List<StatModifier> equipmentModifiers = new List<StatModifier>();
+    private List<StatModifier> buffModifiers = new List<StatModifier>();
 
     public event Action OnStatsChanged;
-    public event Action OnLevelUp;
     public event Action OnDied;
 
-    // IAttackable
-    public Transform Transform => transform;
-    public bool IsAlive => curHP > 0f;
-    public int TeamId => teamId;
-
-    public float MaxHP => data != null ? data.GetMaxHP(level) : 0f;
-    public float MaxMP => data != null ? data.GetMaxMP(level) : 0f;
-    public float Attack => data != null ? data.GetAttack(level) : 0f;
-    public float Defense => data != null ? data.GetDefense(level) : 0f;
-    public float MoveSpeed => data != null ? data.GetMoveSpeed() : 0f;
-    public float AttackInterval => data != null ? data.GetAttackInterval() : 1f;
-
-    private void Awake()
-    {
-        if (data == null)
-            Debug.LogError("PlayerStats: PlayerStatsData가 비어있습니다.", this);
-    }
-
-    private void OnEnable()
-    {
-        AttackableRegistry.Instance?.Register(this);
-    }
-
-    private void OnDisable()
-    {
-        AttackableRegistry.Instance?.Unregister(this);
-    }
 
     private void Start()
     {
-        InitFromData();
-    }
-
-    public void InitFromData()
-    {
-        if (data == null) return;
-
-        level = Mathf.Max(data.baseLevel, 1);
+        level = baseData.baseLevel;
         curHP = MaxHP;
-        curMP = MaxMP;
-
-        curExp = 0f;
-        expToNextLevel = data.GetRequiredExp(level);
-
-        OnStatsChanged?.Invoke();
+        curExp = 0;
+        RecalculateStats();
     }
 
-    public void TakeDamage(float amount)
+    // ★ 공통 Stat 계산 로직
+    private float CalculateStat(StatType type, float baseValue)
     {
-        if (!IsAlive) return;
+        float flat = 0f;
+        float percent = 0f;
 
-        float damage = Mathf.Max(amount - Defense, 1f);
-        curHP = Mathf.Clamp(curHP - damage, 0f, MaxHP);
-        OnStatsChanged?.Invoke();
+        void Accumulate(List<StatModifier> list)
+        {
+            foreach (var mod in list)
+            {
+                if (mod.type != type)
+                    continue;
 
-        if (curHP <= 0f)
-            Die();
+                flat += mod.flatValue;
+                percent += mod.percentValue;
+            }
+        }
+
+        Accumulate(upgradeModifiers);
+        Accumulate(equipmentModifiers);
+        Accumulate(buffModifiers);
+
+        return (baseValue + flat) * (1f + percent);
     }
 
-    public void HealHP(float amount)
+    // === 최종 스탯 ===
+    public float Attack => CalculateStat(StatType.Attack, baseData.GetAttack(level));
+    public float MaxHP => CalculateStat(StatType.MaxHP, baseData.GetMaxHP(level));
+    public float AttackSpeed => CalculateStat(StatType.AttackSpeed, 1f / baseData.GetAttackInterval());
+    public float ExpGainBonus => CalculateStat(StatType.ExpGain, 1f);
+
+    public float SkillDamageBonus => CalculateStat(StatType.SkillDamage, 1f);
+    public float GoldGainBonus => CalculateStat(StatType.GoldGain, 1f);
+
+    public float AttackInterval => baseData.GetAttackInterval() / AttackSpeed;
+
+    public float RequiredExp => baseData.GetRequiredExp(level);
+
+    public Transform Transform => this.gameObject.transform;
+
+    public bool IsAlive => curHP > 0;
+
+    public int TeamId => baseData.TeamID;
+
+    // === Modifier 추가/제거 ===
+    public void AddUpgradeModifier(StatModifier mod)
     {
-        curHP = Mathf.Clamp(curHP + amount, 0f, MaxHP);
+        upgradeModifiers.Add(mod);
+        RecalculateStats();
+    }
+
+    public void AddEquipmentModifier(StatModifier mod)
+    {
+        equipmentModifiers.Add(mod);
+        RecalculateStats();
+    }
+
+    public void AddBuffModifier(StatModifier mod)
+    {
+        buffModifiers.Add(mod);
+        RecalculateStats();
+    }
+
+    public void RemoveEquipmentModifier(StatModifier mod)
+    {
+        equipmentModifiers.Remove(mod);
+        RecalculateStats();
+    }
+
+    public void RemoveBuffModifier(StatModifier mod)
+    {
+        buffModifiers.Remove(mod);
+        RecalculateStats();
+    }
+
+    public void RecalculateStats()
+    {
+        float oldMax = MaxHP;
+        float rate = curHP / oldMax;
+        curHP = Mathf.Clamp(MaxHP * rate, 1, MaxHP);
+
         OnStatsChanged?.Invoke();
     }
 
+    // === Exp / Level ===
     public void AddExp(float amount)
     {
-        if (data == null || level >= data.maxLevel) return;
-
+        amount *= ExpGainBonus;
         curExp += amount;
 
-        while (curExp >= expToNextLevel && level < data.maxLevel)
+        while (curExp >= RequiredExp && RequiredExp > 0)
         {
-            curExp -= expToNextLevel;
-            LevelUpInternal();
+            curExp -= RequiredExp;
+            level++;
+
+            if (level > baseData.maxLevel)
+            {
+                level = baseData.maxLevel;
+                curExp = 0;
+                break;
+            }
+
+            RecalculateStats();
         }
 
         OnStatsChanged?.Invoke();
     }
 
-    private void LevelUpInternal()
+    // === Damage ===
+    public void TakeDamage(float dmg)
     {
-        level++;
-        expToNextLevel = data.GetRequiredExp(level);
-        curHP = MaxHP;
-        curMP = MaxMP;
-        OnLevelUp?.Invoke();
+        curHP -= dmg;
+        if (curHP <= 0)
+        {
+            curHP = 0;
+            OnDied?.Invoke();
+        }
+
+        OnStatsChanged?.Invoke();
     }
 
-    private void Die()
+    public void ReviveFull()
     {
-        OnDied?.Invoke();
-        // 죽음 애니메이션 / 리스폰은 PlayerController에서
+        curHP = MaxHP;
+        OnStatsChanged?.Invoke();
     }
 }

@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using UnityEngine;
 
 [RequireComponent(typeof(Collider))]
@@ -8,7 +8,7 @@ public class EnemyStats : MonoBehaviour, IAttackable
     public EnemyStatsData data;
 
     [Header("Team")]
-    [SerializeField] private int teamId = 1;   // 0 = ÇÃ·¹ÀÌ¾î, 1 = Àû
+    [SerializeField] private int teamId = 1;   // 0 = í”Œë ˆì´ì–´, 1 = ì 
 
     [Header("Runtime")]
     public float curHP;
@@ -16,12 +16,11 @@ public class EnemyStats : MonoBehaviour, IAttackable
     public event Action OnStatsChanged;
     public event Action OnDied;
 
-    // IAttackable ±¸Çö
+    // IAttackable
     public Transform Transform => transform;
     public bool IsAlive => curHP > 0f;
     public int TeamId => teamId;
 
-    // ÀÐ±â¿ë ÇÁ·ÎÆÛÆ¼
     public float MaxHP => data != null ? data.maxHP : 0f;
     public float AttackPower => data != null ? data.attackPower : 0f;
     public float MoveSpeed => data != null ? data.moveSpeed : 0f;
@@ -33,16 +32,18 @@ public class EnemyStats : MonoBehaviour, IAttackable
     private void Awake()
     {
         if (data == null)
-            Debug.LogError("EnemyStats: EnemyStatsData°¡ ºñ¾îÀÖ½À´Ï´Ù.", this);
+            Debug.LogError("EnemyStats: EnemyStatsDataê°€ ë¹„ì–´ìžˆìŠµë‹ˆë‹¤.", this);
     }
 
     private void OnEnable()
     {
+        Debug.Log($"[EnemyStats] Register: {name}");
         AttackableRegistry.Instance?.Register(this);
     }
 
     private void OnDisable()
     {
+        Debug.Log($"[EnemyStats] Unregister: {name}");
         AttackableRegistry.Instance?.Unregister(this);
     }
 
@@ -56,7 +57,11 @@ public class EnemyStats : MonoBehaviour, IAttackable
     {
         if (!IsAlive) return;
 
+        float before = curHP;
         curHP = Mathf.Clamp(curHP - amount, 0f, MaxHP);
+
+        Debug.Log($"[EnemyStats] {name} TakeDamage {amount}, HP {before} -> {curHP}");
+
         OnStatsChanged?.Invoke();
 
         if (curHP <= 0f)
@@ -67,14 +72,33 @@ public class EnemyStats : MonoBehaviour, IAttackable
 
     private void Die()
     {
+        Debug.Log($"[EnemyStats] {name} Die() í˜¸ì¶œë¨");
+
         OnDied?.Invoke();
 
-        // TODO: ¿©±â¼­ °ñµå/EXP Áö±Þ ¿¬°á (³ªÁß¿¡ CurrencyManager, PlayerStats.AddExp µî)
-        // ¿¹½Ã:
-        // PlayerRef.Instance.Stats.AddExp(ExpReward);
-        // CurrencyManager.Instance.AddGold(GoldReward);
+        // ì—¬ê¸°ì„œ StageManagerì— ê¼­ ì•Œë ¤ì¤˜ì•¼ í•¨
+        if (StageManager.Instance != null)
+        {
+            Debug.Log($"[EnemyStats] {name} StageManager.OnEnemyKilled í˜¸ì¶œ");
+            StageManager.Instance.OnEnemyKilled(this);
+        }
+        else
+        {
+            Debug.LogWarning("[EnemyStats] StageManager.Instance == null ì´ë¼ OnEnemyKilled ëª» ë¶€ë¦„");
+        }
 
-        // TODO: Á×À½ ÀÌÆåÆ®/¾Ö´Ï¸ÞÀÌ¼Ç ÇÊ¿äÇÏ¸é Ãß°¡
+        // âœ… ë³´ìƒ ì§€ê¸‰
+        if (PlayerRef.Instance != null)
+        {
+            PlayerRef.Instance.Stats.AddExp(ExpReward);
+        }
+
+        if (CurrencyManager.Instance != null)
+        {
+            float finalGold = GoldReward * PlayerRef.Instance.Stats.GoldGainBonus;
+            CurrencyManager.Instance.AddGold((long)finalGold);
+        }
+
         Destroy(gameObject);
     }
 }

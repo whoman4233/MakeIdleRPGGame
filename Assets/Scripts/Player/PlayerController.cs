@@ -1,5 +1,3 @@
-using System.Xml;
-using Unity.IO.LowLevel.Unsafe;
 using UnityEngine;
 
 public enum PlayerStateType
@@ -21,6 +19,7 @@ public class PlayerController : MonoBehaviour
 
     [Header("Movement")]
     public Transform modelRoot;
+    public float forwardSpeed = 3f;
 
     [Header("Debug")]
     public PlayerStateType currentStateType;
@@ -94,7 +93,7 @@ public class PlayerController : MonoBehaviour
     public void MoveForward()
     {
         Vector3 dir = Vector3.forward;
-        transform.Translate(dir * Stats.MoveSpeed * Time.deltaTime, Space.World);
+        transform.Translate(dir * forwardSpeed * Time.deltaTime, Space.World);
 
         if (modelRoot != null && dir != Vector3.zero)
             modelRoot.rotation = Quaternion.LookRotation(dir);
@@ -109,7 +108,7 @@ public class PlayerController : MonoBehaviour
             return;
 
         Vector3 dir = toTarget.normalized;
-        transform.Translate(dir * Stats.MoveSpeed * Time.deltaTime, Space.World);
+        transform.Translate(dir * forwardSpeed * Time.deltaTime, Space.World);
 
         if (modelRoot != null)
             modelRoot.rotation = Quaternion.LookRotation(dir);
@@ -129,10 +128,12 @@ public class PlayerController : MonoBehaviour
             if (unit == null || !unit.IsAlive)
                 continue;
 
+            // ÆÀ Ã¼Å© ¡æ Stats.TeamId·Î º¯°æµÊ
             if (unit.TeamId == Stats.TeamId)
                 continue;
 
             Transform tr = unit.Transform;
+
             if (((1 << tr.gameObject.layer) & attackableLayers.value) == 0)
                 continue;
 
