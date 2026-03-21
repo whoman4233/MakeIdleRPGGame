@@ -63,9 +63,15 @@ public class AttackState : IPlayerState
             if (_c.modelRoot != null && toTarget != Vector3.zero)
                 _c.modelRoot.rotation = Quaternion.LookRotation(toTarget);
 
-            _c.CurrentTarget.TakeDamage(_c.Stats.Attack);
 
-            yield return new WaitForSeconds(_c.Stats.AttackInterval);
+            float finalDamage = _c.Stats.GetStat(StatType.AttackPower).Value;
+            _c.CurrentTarget.TakeDamage(finalDamage);
+
+            float currentAttackSpeed = _c.Stats.GetStat(StatType.AttackSpeed).Value;
+            float attackInterval = 1f / Mathf.Max(0.1f, currentAttackSpeed);
+
+
+            yield return new WaitForSeconds(attackInterval);
         }
     }
 }

@@ -55,7 +55,7 @@ public class UpgradeItemUI : MonoBehaviour
         costText.text = data.GetCurrentCost().ToString("N0");
 
         bool canBuy = CurrencyManager.Instance != null &&
-                      CurrencyManager.Instance.Gold >= data.GetCurrentCost();
+                      CurrencyManager.Instance.Data >= data.GetCurrentCost();
 
         upgradeButton.interactable = canBuy;
     }

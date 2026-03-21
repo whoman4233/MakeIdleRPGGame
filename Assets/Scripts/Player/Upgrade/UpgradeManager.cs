@@ -20,15 +20,19 @@ public class UpgradeManager : MonoBehaviour
 
         int cost = data.GetCurrentCost();
 
-        if (CurrencyManager.Instance.Gold < cost)
+        if (CurrencyManager.Instance.Data < cost)
             return false;
 
-        CurrencyManager.Instance.AddGold(-cost);
+        CurrencyManager.Instance.AddData(-cost);
 
         data.level++;
 
-        // Modifier ����
-        PlayerRef.Instance.Stats.AddUpgradeModifier(data.modifier);
+        // 변경된 구조에 맞게 PlayerStats에서 해당 스탯 객체를 직접 가져와 Modifier를 추가합니다.
+        Stat targetStat = PlayerRef.Instance.Stats.GetStat(data.modifier.statType);
+        if (targetStat != null)
+        {
+            targetStat.AddModifier(data.modifier);
+        }
 
         return true;
     }

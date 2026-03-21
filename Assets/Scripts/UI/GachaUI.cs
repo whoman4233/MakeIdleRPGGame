@@ -4,26 +4,32 @@ using UnityEngine.UI;
 
 public class GachaUI : MonoBehaviour
 {
-    public GachaManager gachaManager;
+    public ExtractionManager extractionManager;
 
     [Header("UI")]
     public TextMeshProUGUI costText;
-    public TextMeshProUGUI resultText;   // "¡Û¡Û »ÌÀ½!" ÀÌ·± °Å ¶ç¿ì±â¿ë (¼±ÅÃ)
+    public TextMeshProUGUI resultText;
     public Button gachaButton;
 
     private void Start()
     {
-        if (gachaManager == null)
-            gachaManager = GachaManager.Instance;
+        if (extractionManager == null)
+            extractionManager = ExtractionManager.Instance;
 
         if (gachaButton != null)
-            gachaButton.onClick.AddListener(OnClickGacha);
+            gachaButton.onClick.AddListener(OnClickExtract);
 
         if (CurrencyManager.Instance != null)
             CurrencyManager.Instance.OnCurrencyChanged += RefreshInteractable;
 
-        if (gachaManager != null && costText != null)
-            costText.text = $"{gachaManager.cost:N0} G";
+        if (extractionManager != null)
+        {
+            extractionManager.OnExtractionSuccess += HandleExtractionSuccess;
+            extractionManager.OnExtractionFailed += HandleExtractionFailed;
+            
+            if (costText != null)
+                costText.text = $"{extractionManager.basicExtractionCost:N0} Data";
+        }
 
         RefreshInteractable();
     }
@@ -31,27 +37,41 @@ public class GachaUI : MonoBehaviour
     private void OnDestroy()
     {
         if (gachaButton != null)
-            gachaButton.onClick.RemoveListener(OnClickGacha);
+            gachaButton.onClick.RemoveListener(OnClickExtract);
 
         if (CurrencyManager.Instance != null)
             CurrencyManager.Instance.OnCurrencyChanged -= RefreshInteractable;
+
+        if (extractionManager != null)
+        {
+            extractionManager.OnExtractionSuccess -= HandleExtractionSuccess;
+            extractionManager.OnExtractionFailed -= HandleExtractionFailed;
+        }
     }
 
-    private void OnClickGacha()
+    private void OnClickExtract()
     {
-        if (gachaManager == null) return;
+        if (extractionManager == null) return;
+        
+        // ìˆ˜ì •ëœ ë©”ì„œë“œ í˜¸ì¶œ
+        extractionManager.ExtractBasic();
+    }
 
-        if (gachaManager.TryGacha(out var reward))
+    private void HandleExtractionSuccess(GraftData reward)
+    {
+        if (resultText != null && reward != null)
         {
-            if (resultText != null && reward != null)
-                resultText.text = $"{reward.displayName} È¹µæ!";
+            resultText.text = $"[ê²½ê³ ] ë¯¸í™•ì¸ í‘œë³¸ ì¶”ì¶œë¨:\n{reward.graftName}"; 
         }
-        else
-        {
-            if (resultText != null)
-                resultText.text = "»Ì±â ½ÇÆÐ (°ñµå ºÎÁ·?)";
-        }
+        RefreshInteractable();
+    }
 
+    private void HandleExtractionFailed()
+    {
+        if (resultText != null)
+        {
+            resultText.text = "ë°ì´í„° ë¶€ì¡±. ì¶”ì¶œ í”„ë¡œí† ì½œ ê±°ë¶€ë¨.";
+        }
         RefreshInteractable();
     }
 
@@ -60,9 +80,10 @@ public class GachaUI : MonoBehaviour
         if (gachaButton == null) return;
 
         bool can = false;
-        if (CurrencyManager.Instance != null && gachaManager != null)
+        if (CurrencyManager.Instance != null && extractionManager != null)
         {
-            can = CurrencyManager.Instance.Gold >= gachaManager.cost;
+            // Gold -> Data ë¡œ ë³€ê²½ ì ìš©
+            can = CurrencyManager.Instance.Data >= extractionManager.basicExtractionCost;
         }
 
         gachaButton.interactable = can;

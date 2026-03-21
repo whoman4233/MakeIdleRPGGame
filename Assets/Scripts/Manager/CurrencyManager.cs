@@ -5,36 +5,29 @@ public class CurrencyManager : MonoBehaviour
 {
     public static CurrencyManager Instance { get; private set; }
 
-    [Header("Runtime")]
-    [SerializeField] private long gold;
-    [SerializeField] private long gem; // « ø‰ æ¯¿∏∏È ª©µµ µ 
-
-    public long Gold => gold;
-    public long Gem => gem;
+    // Gold -> Í¥ÄÏ∏° Îç∞Ïù¥ÌÑ∞
+    public int Data { get; private set; }
+    
+    // Gem -> Ïù¥ÏÉÅ ÏΩîÏñ¥
+    public int Core { get; private set; }
 
     public event Action OnCurrencyChanged;
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
-        Instance = this;
-        DontDestroyOnLoad(gameObject);
+        if (Instance == null) Instance = this;
+        else Destroy(gameObject);
     }
 
-    public void AddGold(long amount)
+    public void AddData(int amount)
     {
-        gold = Math.Max(0, gold + amount);
+        Data += amount;
         OnCurrencyChanged?.Invoke();
     }
 
-    public void AddGem(long amount)
+    public void AddCore(int amount)
     {
-        gem = Math.Max(0, gem + amount);
+        Core += amount;
         OnCurrencyChanged?.Invoke();
     }
 }

@@ -87,16 +87,9 @@ public class EnemyStats : MonoBehaviour, IAttackable
             Debug.LogWarning("[EnemyStats] StageManager.Instance == null 이라 OnEnemyKilled 못 부름");
         }
 
-        // ✅ 보상 지급
-        if (PlayerRef.Instance != null)
-        {
-            PlayerRef.Instance.Stats.AddExp(ExpReward);
-        }
-
         if (CurrencyManager.Instance != null)
         {
-            float finalGold = GoldReward * PlayerRef.Instance.Stats.GoldGainBonus;
-            CurrencyManager.Instance.AddGold((long)finalGold);
+            CurrencyManager.Instance.AddData((int)GoldReward);
         }
 
         Destroy(gameObject);

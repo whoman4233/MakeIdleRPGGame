@@ -39,8 +39,8 @@ public class UpgradeUI : MonoBehaviour
 
         titleText.text = data.upgradeName;
         levelText.text = $"Lv. {data.level}";
-        costText.text = $"{data.GetCurrentCost()} G";
+        costText.text = $"{data.GetCurrentCost()} Data";
 
-        upgradeButton.interactable = (CurrencyManager.Instance.Gold >= data.GetCurrentCost());
+        upgradeButton.interactable = (CurrencyManager.Instance.Data >= data.GetCurrentCost());
     }
 }

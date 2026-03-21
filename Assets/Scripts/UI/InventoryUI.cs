@@ -3,17 +3,17 @@ using UnityEngine;
 public class InventoryUI : MonoBehaviour
 {
     public RectTransform contentRoot;       // ScrollView/Viewport/Content
-    public InventoryItemUI itemPrefab;
+    public InventoryItemUi itemPrefab;
 
     private InventoryManager _inventory;
-    private PlayerEquipment _playerEquipment;
+    private PlayerGraft _playerGraft;       // PlayerEquipment ➔ PlayerGraft로 변경
 
     private void Start()
     {
         _inventory = InventoryManager.Instance;
 
-        if (PlayerRef.Instance != null)
-            _playerEquipment = PlayerRef.Instance.GetComponent<PlayerEquipment>();
+        if (PlayerRef.Instance != null)    // (주의) PlayerRef 인지 PlayerRefs 인지 확인 필요
+            _playerGraft = PlayerRef.Instance.GetComponent<PlayerGraft>();
 
         if (_inventory != null)
             _inventory.OnInventoryChanged += Rebuild;
@@ -32,20 +32,20 @@ public class InventoryUI : MonoBehaviour
         if (_inventory == null || contentRoot == null || itemPrefab == null)
             return;
 
-        // ���� �����۵� ����
+        // 기존 생성된 슬롯들 삭제 (초기화)
         for (int i = contentRoot.childCount - 1; i >= 0; i--)
         {
             Destroy(contentRoot.GetChild(i).gameObject);
         }
 
-        var list = _inventory.Equipments;
+        var list = _inventory.Grafts;       // Equipments ➔ Grafts로 변경
         for (int i = 0; i < list.Count; i++)
         {
-            var equip = list[i];
-            if (equip == null) continue;
+            var graft = list[i];
+            if (graft == null) continue;
 
             var slotUI = Instantiate(itemPrefab, contentRoot);
-            slotUI.Init(equip, _playerEquipment);
+            slotUI.Init(graft, _playerGraft); // 이 부분 때문에 InventoryItemUi.cs 에서도 에러가 날 것입니다!
         }
     }
 }

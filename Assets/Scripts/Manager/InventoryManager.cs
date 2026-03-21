@@ -7,9 +7,9 @@ public class InventoryManager : MonoBehaviour
     public static InventoryManager Instance { get; private set; }
 
     [SerializeField]
-    private List<EquipmentData> equipments = new List<EquipmentData>();
+    private List<GraftData> grafts = new List<GraftData>();
 
-    public IReadOnlyList<EquipmentData> Equipments => equipments;
+    public IReadOnlyList<GraftData> Grafts => grafts;
 
     public event Action OnInventoryChanged;
 
@@ -25,24 +25,25 @@ public class InventoryManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    public void AddEquipment(EquipmentData data)
+    public void AddGraft(GraftData data)
     {
         if (data == null) return;
 
-        equipments.Add(data);
+        grafts.Add(data);
         OnInventoryChanged?.Invoke();
 
-        Debug.Log($"[Inventory] ��� �߰�: {data.displayName}");
+        // 기존의 깨진 한글 로그를 알아보기 쉽게 변경
+        Debug.Log($"[Inventory] 괴이 육체 추가됨: {data.graftName}");
     }
 
-    public void RemoveEquipment(EquipmentData data)
+    public void RemoveGraft(GraftData data)
     {
         if (data == null) return;
 
-        if (equipments.Remove(data))
+        if (grafts.Remove(data))
         {
             OnInventoryChanged?.Invoke();
-            Debug.Log($"[Inventory] ��� ����: {data.displayName}");
+            Debug.Log($"[Inventory] 괴이 육체 제거됨: {data.graftName}");
         }
     }
 }

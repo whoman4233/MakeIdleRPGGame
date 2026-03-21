@@ -10,7 +10,7 @@ public class EnemyController : MonoBehaviour
     public Transform modelRoot;
 
     [Header("AI")]
-    [Tooltip("°Å¸® Ã¼Å© ÁÖ±â (ÃÊ)")]
+    [Tooltip("ï¿½Å¸ï¿½ Ã¼Å© ï¿½Ö±ï¿½ (ï¿½ï¿½)")]
     public float thinkInterval = 0.2f;
 
     private IAttackable _player;
@@ -22,11 +22,13 @@ public class EnemyController : MonoBehaviour
         Stats = GetComponent<EnemyStats>();
     }
 
-    private void Start()
+   private void Start()
     {
-        // PlayerStats°¡ IAttackable ±¸ÇöÇßÀ¸´Ï±î ±×´ë·Î Å¸°ÙÀ¸·Î »ç¿ë
+        // PlayerStats ëŒ€ì‹  í”Œë ˆì´ì–´ ì˜¤ë¸Œì íŠ¸ì— ë¶€ì°©ëœ IAttackable(ì˜ˆ: HealthSystem)ì„ ê°€ì ¸ì˜µë‹ˆë‹¤.
         if (PlayerRef.Instance != null)
-            _player = PlayerRef.Instance.Stats;
+        {
+            _player = PlayerRef.Instance.GetComponent<IAttackable>();
+        }
     }
 
     private void Update()
@@ -74,16 +76,16 @@ public class EnemyController : MonoBehaviour
                 yield break;
             }
 
-            // ÇÃ·¹ÀÌ¾î ÂÊ ¹Ù¶óº¸±â
+            // ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½ï¿½ ï¿½Ù¶óº¸±ï¿½
             Vector3 toPlayer = _player.Transform.position - transform.position;
             toPlayer.y = 0f;
             if (modelRoot != null && toPlayer != Vector3.zero)
                 modelRoot.rotation = Quaternion.LookRotation(toPlayer);
 
-            // µ¥¹ÌÁö
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             _player.TakeDamage(Stats.AttackPower);
 
-            // TODO: °ø°İ ¾Ö´Ï¸ŞÀÌ¼Ç, »ç¿îµå, ÀÌÆåÆ®
+            // TODO: ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´Ï¸ï¿½ï¿½Ì¼ï¿½, ï¿½ï¿½ï¿½ï¿½, ï¿½ï¿½ï¿½ï¿½Æ®
 
             yield return new WaitForSeconds(Stats.AttackInterval);
         }

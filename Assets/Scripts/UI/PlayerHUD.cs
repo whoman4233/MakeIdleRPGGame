@@ -7,6 +7,7 @@ public class PlayerHUD : MonoBehaviour
 {
     [Header("Refs")]
     public PlayerStats playerStats;
+    private HealthSystem healthSystem; // HealthSystem ì°¸ì¡° ì¶”ê°€
 
     [Header("Bars (Filled Image)")]
     public Image hpFill;
@@ -14,12 +15,12 @@ public class PlayerHUD : MonoBehaviour
 
     [Header("Texts")]
     public TextMeshProUGUI goldText;
-    public TextMeshProUGUI hpText;    // ¿É¼Ç
-    public TextMeshProUGUI expText;   // ¿É¼Ç
-    public TextMeshProUGUI levelText; // ¿É¼Ç
+    public TextMeshProUGUI hpText;    // ì˜µì…˜
+    public TextMeshProUGUI expText;   // ì˜µì…˜
+    public TextMeshProUGUI levelText; // ì˜µì…˜
 
     [Header("Tween Settings")]
-    [Tooltip("HP/EXP ¹Ù°¡ ¸ñÇ¥ °ª±îÁö µµ´ŞÇÏ´Â ½Ã°£(ÃÊ)")]
+    [Tooltip("HP/EXP ë°”ê°€ ëª©í‘œ ìˆ˜ì¹˜ë¡œ ì´ë™í•˜ëŠ” ì‹œê°„(ì´ˆ)")]
     public float tweenDuration = 0.25f;
     public bool useUnscaledTime = false;
 
@@ -31,136 +32,93 @@ public class PlayerHUD : MonoBehaviour
 
     private void Start()
     {
-        // PlayerStats ÀÚµ¿ Ã£±â
-        if (playerStats == null && PlayerRef.Instance != null)
-            playerStats = PlayerRef.Instance.Stats;
+        // PlayerRefë¥¼ í†µí•´ Statsì™€ HealthSystem ìºì‹±
+        if (PlayerRef.Instance != null)
+        {
+            if (playerStats == null) playerStats = PlayerRef.Instance.Stats;
+            healthSystem = PlayerRef.Instance.Health;
+        }
 
+        // ìŠ¤íƒ¯ ë³€ë™ ì´ë²¤íŠ¸ êµ¬ë… (EXP, ë ˆë²¨ì—… ë“±)
         if (playerStats != null)
         {
-            playerStats.OnStatsChanged += RefreshStats;
-            if (enableDebug)
-                Debug.Log("[HUD] PlayerStats ±¸µ¶ ¿Ï·á", this);
-        }
-        else
-        {
-            if (enableDebug)
-                Debug.LogWarning("[HUD] PlayerStats°¡ ÇÒ´çµÇÁö ¾Ê¾Ò½À´Ï´Ù.", this);
+            // ì£¼ì˜: PlayerStats ë‚´ë¶€ì— OnStatsChanged ì´ë²¤íŠ¸ê°€ ì •ì˜ë˜ì–´ ìˆì–´ì•¼ í•©ë‹ˆë‹¤.
+            // playerStats.OnStatsChanged += RefreshStats; 
+            if (enableDebug) Debug.Log("[HUD] PlayerStats ì—°ê²° ì™„ë£Œ", this);
         }
 
+        // ì²´ë ¥ ë³€ë™ ì´ë²¤íŠ¸ êµ¬ë…
+        if (healthSystem != null)
+        {
+            healthSystem.OnHealthChanged += RefreshStats; 
+        }
+
+        // ì¬í™” ë³€ë™ ì´ë²¤íŠ¸ êµ¬ë…
         if (CurrencyManager.Instance != null)
         {
             CurrencyManager.Instance.OnCurrencyChanged += RefreshCurrency;
         }
 
-        // ÃÊ±â °ª ÇÑ ¹ø ¹İ¿µ
+        // ì´ˆê¸° HUD ì„¸íŒ…
         RefreshStats();
         RefreshCurrency();
     }
 
     private void OnDestroy()
     {
-        if (playerStats != null)
+        /* if (playerStats != null)
             playerStats.OnStatsChanged -= RefreshStats;
+        */
+
+        if (healthSystem != null)
+            healthSystem.OnHealthChanged -= RefreshStats;
 
         if (CurrencyManager.Instance != null)
             CurrencyManager.Instance.OnCurrencyChanged -= RefreshCurrency;
     }
 
-    // ====== Stats °»½Å ======
+    // ====== Stats ê°±ì‹  ======
     private void RefreshStats()
     {
-        if (playerStats == null)
-            return;
-
-        // HP
-        if (hpFill != null)
+        // HP ê°±ì‹  ë¡œì§ (HealthSystem + PlayerStats ì¡°í•©)
+        if (hpFill != null && healthSystem != null && playerStats != null)
         {
-            float maxHp = Mathf.Max(1f, playerStats.MaxHP); // 0 ³ª´©±â ¹æÁö
-            float target = Mathf.Clamp01(playerStats.curHP / maxHp);
+            float maxHp = Mathf.Max(1f, playerStats.GetStatValue(StatType.MaxHealth));
+            float curHp = healthSystem.CurrentHealth; // HealthSystemì—ì„œ í˜„ì¬ ì²´ë ¥ ê°€ì ¸ì˜¤ê¸°
+            float target = Mathf.Clamp01(curHp / maxHp);
 
             if (enableDebug)
             {
-                Debug.Log($"[HUD] HP °»½Å - curHP={playerStats.curHP}, maxHP={maxHp}, fillTarget={target}", this);
+                Debug.Log($"[HUD] HP ê°±ì‹  - curHP={curHp}, maxHP={maxHp}, fillTarget={target}", this);
             }
 
-            // Tween
-            if (_hpTweenRoutine != null)
-                StopCoroutine(_hpTweenRoutine);
+            if (_hpTweenRoutine != null) StopCoroutine(_hpTweenRoutine);
             _hpTweenRoutine = StartCoroutine(TweenFillAmount(hpFill, target));
-        }
 
-        // EXP
-        if (expFill != null)
-        {
-            float required = playerStats.RequiredExp;
-            float target;
-
-            if (required > 0f)
-                target = Mathf.Clamp01(playerStats.curExp / required);
-            else
-                target = 1f;
-
-            if (enableDebug)
+            if (hpText != null)
             {
-                Debug.Log($"[HUD] EXP °»½Å - curExp={playerStats.curExp}, required={required}, fillTarget={target}", this);
+                hpText.text = $"{Mathf.FloorToInt(curHp)}/{Mathf.FloorToInt(maxHp)}";
             }
-
-            if (_expTweenRoutine != null)
-                StopCoroutine(_expTweenRoutine);
-            _expTweenRoutine = StartCoroutine(TweenFillAmount(expFill, target));
-        }
-
-        // ¼±ÅÃ: ¼ıÀÚ ÅØ½ºÆ® Ç¥½Ã
-        if (hpText != null)
-        {
-            hpText.text = $"{Mathf.FloorToInt(playerStats.curHP)}/{Mathf.FloorToInt(playerStats.MaxHP)}";
-        }
-
-        if (expText != null)
-        {
-            float required = playerStats.RequiredExp;
-
-            if (required > 0f)
-                expText.text = $"{Mathf.FloorToInt(playerStats.curExp)}/{Mathf.FloorToInt(required)}";
-            else
-                expText.text = "MAX";
-        }
-
-        if (levelText != null)
-        {
-            levelText.text = $"Lv.{playerStats.level}";
         }
     }
 
-    // ====== Currency °»½Å ======
+    // ====== Currency ê°±ì‹  ======
     private void RefreshCurrency()
     {
         if (goldText != null && CurrencyManager.Instance != null)
         {
-            goldText.text = CurrencyManager.Instance.Gold.ToString("N0");
+            // Gold ëŒ€ì‹  Data(ê´€ì¸¡ ë°ì´í„°) í‘œì‹œ
+            goldText.text = CurrencyManager.Instance.Data.ToString("N0");
 
             if (enableDebug)
-                Debug.Log($"[HUD] Gold °»½Å - {CurrencyManager.Instance.Gold}", this);
+                Debug.Log($"[HUD] Data ê°±ì‹  - {CurrencyManager.Instance.Data}", this);
         }
     }
 
-    // ====== Tween ÄÚ·çÆ¾ ======
+    // ====== Tween ì½”ë£¨í‹´ ======
     private IEnumerator TweenFillAmount(Image image, float target)
     {
-        if (image == null)
-            yield break;
-
-        // Image ¼³Á¤ È®ÀÎ ·Î±×
-        if (enableDebug)
-        {
-            if (image.type != Image.Type.Filled)
-            {
-                Debug.LogWarning(
-                    $"[HUD] {image.name} Image.typeÀÌ Filled°¡ ¾Æ´Õ´Ï´Ù. ÇöÀç °ª: {image.type}",
-                    image
-                );
-            }
-        }
+        if (image == null) yield break;
 
         float start = image.fillAmount;
         float time = 0f;

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public enum PlayerStateType
@@ -9,7 +10,7 @@ public enum PlayerStateType
     Dead
 }
 
-[RequireComponent(typeof(PlayerStats))]
+[RequireComponent(typeof(PlayerStats), typeof(HealthSystem))]
 public class PlayerController : MonoBehaviour
 {
     [Header("Detection")]
@@ -27,6 +28,7 @@ public class PlayerController : MonoBehaviour
     public PlayerStats Stats { get; private set; }
     public IAttackable CurrentTarget { get; set; }
 
+    private HealthSystem _healthSystem; // HealthSystem 참조 추가
     private IPlayerState _currentState;
     private IPlayerState
         _idleState, _moveState, _chaseState, _attackState, _deadState;
@@ -34,6 +36,7 @@ public class PlayerController : MonoBehaviour
     private void Awake()
     {
         Stats = GetComponent<PlayerStats>();
+        _healthSystem = GetComponent<HealthSystem>(); // 초기화
 
         _idleState = new IdleState();
         _moveState = new MoveForwardState();
@@ -44,12 +47,20 @@ public class PlayerController : MonoBehaviour
 
     private void OnEnable()
     {
-        Stats.OnDied += OnDied;
+        if (_healthSystem != null)
+        {
+            // HealthSystem의 사망 이벤트 구독
+            _healthSystem.OnDied += OnDied;
+        }
     }
 
     private void OnDisable()
     {
-        Stats.OnDied -= OnDied;
+        if (_healthSystem != null)
+        {
+            // HealthSystem의 사망 이벤트 구독 해제
+            _healthSystem.OnDied -= OnDied;
+        }
     }
 
     private void Start()
@@ -123,13 +134,17 @@ public class PlayerController : MonoBehaviour
         float bestSqr = maxSqr;
         IAttackable best = null;
 
+        // 임시로 Player의 팀 ID를 0이라고 가정하여 하드코딩 혹은 HealthSystem을 참조하도록 처리할 수 있습니다.
+        // 기존 Stats.TeamId 부분은 게임 로직에 따라 알맞은 위치에서 가져오게 수정이 필요할 수 있습니다.
+        int myTeamId = _healthSystem != null ? _healthSystem.TeamId : 0;
+
         foreach (var unit in registry.Units)
         {
             if (unit == null || !unit.IsAlive)
                 continue;
 
-            // �� üũ �� Stats.TeamId�� �����
-            if (unit.TeamId == Stats.TeamId)
+            // 적 체크 시 팀 ID 비교
+            if (unit.TeamId == myTeamId)
                 continue;
 
             Transform tr = unit.Transform;

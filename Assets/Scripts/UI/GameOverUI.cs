@@ -33,14 +33,14 @@ public class GameOverUI : MonoBehaviour
         if (continueButton != null)
             continueButton.onClick.AddListener(OnClickContinue);
 
-        // Player Á×À½ ÀÌº¥Æ® ±¸µ¶
+        // Player ï¿½ï¿½ï¿½ï¿½ ï¿½Ìºï¿½Æ® ï¿½ï¿½ï¿½ï¿½
         if (PlayerRef.Instance != null && PlayerRef.Instance.Stats != null)
         {
-            PlayerRef.Instance.Stats.OnDied += OnPlayerDied;
+            PlayerRef.Instance.Health.OnDied += OnPlayerDied;
         }
         else
         {
-            Debug.LogWarning("[GameOverUI] PlayerRef ¶Ç´Â PlayerStats¸¦ Ã£Áö ¸øÇß½À´Ï´Ù.");
+            Debug.LogWarning("[GameOverUI] PlayerRef Ç´ PlayerStats Ã£ ß½Ï´.");
         }
     }
 
@@ -48,7 +48,7 @@ public class GameOverUI : MonoBehaviour
     {
         if (PlayerRef.Instance != null && PlayerRef.Instance.Stats != null)
         {
-            PlayerRef.Instance.Stats.OnDied -= OnPlayerDied;
+            PlayerRef.Instance.Health.OnDied -= OnPlayerDied;
         }
     }
 
@@ -67,7 +67,7 @@ public class GameOverUI : MonoBehaviour
         panelGroup.gameObject.SetActive(true);
         panelGroup.alpha = 1f;
 
-        // °ÔÀÓ ÀÏ½ÃÁ¤Áö ÇÏ°í ½ÍÀ¸¸é:
+        // ï¿½ï¿½ï¿½ï¿½ ï¿½Ï½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ï°ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½:
         // Time.timeScale = 0f;
     }
 
@@ -81,12 +81,16 @@ public class GameOverUI : MonoBehaviour
 
     private void OnClickContinue()
     {
-        // Time.timeScale = 1f; // ÀÏ½ÃÁ¤Áö ½èÀ¸¸é ÇØÁ¦
+        // Time.timeScale = 1f; // ì¼ì‹œì •ì§€ë¥¼ ì‚¬ìš©í–ˆë‹¤ë©´ í•´ì œ
 
-        // ÇÃ·¹ÀÌ¾î ºÎÈ°
-        if (PlayerRef.Instance != null && PlayerRef.Instance.Stats != null)
+        // í”Œë ˆì´ì–´ ë¶€í™œ ë¡œì§ í˜¸ì¶œ
+        if (PlayerRef.Instance != null && PlayerRef.Instance.Health != null)
         {
-            PlayerRef.Instance.Stats.ReviveFull();
+            // Statsê°€ ì•„ë‹Œ Health ì»´í¬ë„ŒíŠ¸ì˜ ReviveFullì„ í˜¸ì¶œí•©ë‹ˆë‹¤.
+            PlayerRef.Instance.Health.ReviveFull();
+            
+            // ë§Œì•½ í”Œë ˆì´ì–´ì˜ ìƒíƒœë¥¼ ë‹¤ì‹œ MoveForward ë“±ìœ¼ë¡œ ë°”ê¿”ì•¼ í•œë‹¤ë©´:
+            // PlayerRef.Instance.Controller.ChangeState(PlayerStateType.MoveForward);
         }
 
         Hide();
