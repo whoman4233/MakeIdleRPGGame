@@ -1,155 +1,64 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class StageEnemySpawner : MonoBehaviour
 {
-    [Header("Spawn Area")]
-    public Vector3 spawnAreaSize = new Vector3(5, 0, 5);
+    [Header("Spawn Setup")]
+    public EnemyController masterEnemyPrefab;      // 우리가 만든 '단 하나의 껍데기 프리팹'
+    public List<EnemyStatsData> spawnableEnemies;  // 이번 스테이지에 나올 적 데이터(SO) 리스트
+    
+    [Header("Spawn Rules")]
+    public float spawnInterval = 3f;               // 스폰 주기
+    public float spawnOffsetX = 15f;               // 플레이어 기준 오른쪽으로 얼마나 멀리서 생성할지
 
-    [Header("Boss Spawn")]
-    public Transform bossSpawnPoint; // ����θ� �� ������ ��ġ ���
-
-    private float _timer;
-    private bool _bossSpawned;
-
-    private void OnEnable()
-    {
-        if (StageManager.Instance != null)
-        {
-            StageManager.Instance.OnStageChanged += OnStageChanged;
-            StageManager.Instance.OnPhaseChanged += OnPhaseChanged;
-        }
-    }
-
-    private void OnDisable()
-    {
-        if (StageManager.Instance != null)
-        {
-            StageManager.Instance.OnStageChanged -= OnStageChanged;
-            StageManager.Instance.OnPhaseChanged -= OnPhaseChanged;
-        }
-    }
+    private Coroutine _spawnRoutine;
 
     private void Start()
     {
-        ResetForCurrentStage();
+        StartSpawning();
     }
 
-    private void Update()
+    public void StartSpawning()
     {
-        var stageMgr = StageManager.Instance;
-        if (stageMgr == null)
-            return;
+        if (_spawnRoutine == null)
+            _spawnRoutine = StartCoroutine(SpawnRoutine());
+    }
 
-        var stage = stageMgr.CurrentStage;
-        if (stage == null)
-            return;
-
-        var phase = stageMgr.CurrentPhase;
-
-        if (phase == StagePhase.Normal)
+    public void StopSpawning()
+    {
+        if (_spawnRoutine != null)
         {
-            UpdateNormalPhase(stage);
-        }
-        else if (phase == StagePhase.Boss)
-        {
-            UpdateBossPhase(stage);
-        }
-        else
-        {
-            // Cleared �� �ٸ� ���¿����� �ƹ� �͵� �� ��
+            StopCoroutine(_spawnRoutine);
+            _spawnRoutine = null;
         }
     }
 
-    private void UpdateNormalPhase(StageData stage)
+    private IEnumerator SpawnRoutine()
     {
-        if (stage.normalEnemyPrefab == null)
-            return;
-
-        _timer += Time.deltaTime;
-        if (_timer < stage.spawnIntervalNormal)
-            return;
-
-        _timer = 0f;
-
-        int aliveNormal = 0;
-
-        if (AttackableRegistry.Instance != null)
+        while (true)
         {
-            foreach (var unit in AttackableRegistry.Instance.Units)
-            {
-                if (unit is EnemyStats enemy && enemy.IsAlive && enemy.data != null && !enemy.data.isBoss)
-                {
-                    aliveNormal++;
-                }
-            }
-        }
-
-        if (aliveNormal >= stage.maxAliveNormal)
-            return;
-
-        SpawnNormal(stage.normalEnemyPrefab);
-    }
-
-    private void UpdateBossPhase(StageData stage)
-    {
-        if (_bossSpawned)
-            return;
-
-        if (stage.bossEnemyPrefab == null)
-            return;
-
-        SpawnBoss(stage.bossEnemyPrefab);
-        _bossSpawned = true;
-    }
-
-    private void SpawnNormal(EnemyStats prefab)
-    {
-        Vector3 offset = new Vector3(
-            Random.Range(-spawnAreaSize.x * 0.5f, spawnAreaSize.x * 0.5f),
-            0f,
-            Random.Range(-spawnAreaSize.z * 0.5f, spawnAreaSize.z * 0.5f)
-        );
-
-        Vector3 pos = transform.position + offset;
-        Instantiate(prefab, pos, Quaternion.identity);
-    }
-
-    private void SpawnBoss(EnemyStats prefab)
-    {
-        Vector3 pos = bossSpawnPoint != null ? bossSpawnPoint.position : transform.position;
-        Instantiate(prefab, pos, Quaternion.identity);
-        Debug.Log("[StageEnemySpawner] Boss Spawned");
-    }
-
-    private void OnStageChanged()
-    {
-        ResetForCurrentStage();
-    }
-
-    private void OnPhaseChanged(StagePhase phase)
-    {
-        if (phase == StagePhase.Normal)
-        {
-            _bossSpawned = false;
-            _timer = 0f;
+            SpawnEnemy();
+            yield return new WaitForSeconds(spawnInterval);
         }
     }
 
-    private void ResetForCurrentStage()
+    private void SpawnEnemy()
     {
-        _bossSpawned = false;
-        _timer = 0f;
-    }
+        if (masterEnemyPrefab == null || spawnableEnemies == null || spawnableEnemies.Count == 0) return;
+        if (PlayerRef.Instance == null) return;
 
-    private void OnDrawGizmosSelected()
-    {
-        Gizmos.color = Color.green;
-        Gizmos.DrawWireCube(transform.position + Vector3.up * 0.1f, spawnAreaSize);
+        // ★ 런닝머신 전용 고정 스폰 위치 (플레이어 우측 +15)
+        Vector3 spawnPos = PlayerRef.Instance.transform.position;
+        spawnPos.x += spawnOffsetX;
+        spawnPos.y = 0f;
+        spawnPos.z = 0f;
 
-        if (bossSpawnPoint != null)
-        {
-            Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(bossSpawnPoint.position, 0.5f);
-        }
+        // 껍데기 생성
+        EnemyController newEnemy = Instantiate(masterEnemyPrefab, spawnPos, Quaternion.identity);
+        
+        // 랜덤 데이터 주입 (변신!)
+        EnemyStatsData randomData = spawnableEnemies[Random.Range(0, spawnableEnemies.Count)];
+        newEnemy.Init(randomData);
     }
 }

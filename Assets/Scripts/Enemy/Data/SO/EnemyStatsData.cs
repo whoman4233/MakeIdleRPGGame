@@ -1,21 +1,28 @@
 ﻿using UnityEngine;
 
+// 에디터에서 우클릭으로 쉽게 데이터를 생성할 수 있도록 메뉴 속성 추가
+[CreateAssetMenu(fileName = "NewEnemyData", menuName = "Anomaly/Enemy Data")]
 public class EnemyStatsData : ScriptableObject
 {
     [Header("Basic Info")]
     public string id = "enemy_default";
-    public string displayName = "Slime";
+    
+    [Header("Visuals (2.5D)")]
+    public string enemyName = "미확인 표본";      // UI나 로그에 띄울 적 이름
+    public Sprite enemySprite;                    // 적 2D 이미지 (스포너가 껍데기에 씌워줄 이미지)
+    public Vector3 visualScale = Vector3.one;     // 크기 조절용 (보스는 크게, 잡몹은 작게)
+    public Color visualColor = Color.white;       // 색상 베리에이션 (팔레트 스왑용)
 
     [Header("Stats")]
-    public float maxHP = 50f;
-    public float attackPower = 5f;
-    public float moveSpeed = 0f;
-    public float attackInterval = 1.5f;
-    public float attackRange = 1.5f;
+    public float MaxHealth = 50f;                 // 기존 maxHP
+    public float AttackPower = 5f;                // 기존 attackPower
+    public float MoveSpeed = 2f;                  // 기존 0이었으나 런닝머신을 위해 기본값 2로 세팅
+    public float AttackInterval = 1.5f;           // 기존 attackInterval
+    public float AttackRange = 1.5f;              // 기존 attackRange
 
     [Header("Reward")]
-    public int expReward = 10;
-    public long goldReward = 5;
+    // EXP 시스템이 폐기되었으므로 expReward는 완전히 삭제했습니다.
+    public int DropGold = 5;                      // 기존 goldReward (관측 데이터 드랍량)
 
     [Header("Flags")]
     public bool isBoss = false; 
