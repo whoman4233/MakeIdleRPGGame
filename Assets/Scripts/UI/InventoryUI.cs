@@ -1,24 +1,42 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class InventoryUI : MonoBehaviour
 {
-    public RectTransform contentRoot;       // ScrollView/Viewport/Content
+    [Header("Refs")]
+    public RectTransform contentRoot;
     public InventoryItemUi itemPrefab;
 
+    [Header("Pooling Settings")]
+    public int initialPoolSize = 100; // 초기 생성 슬롯 수
+
     private InventoryManager _inventory;
-    private PlayerGraft _playerGraft;       // PlayerEquipment ➔ PlayerGraft로 변경
+    private PlayerGraft _playerGraft;
+    private Action<GraftData> _onItemSelectedCallback;
+
+    // 생성된 모든 UI 슬롯을 관리하는 리스트
+    private List<InventoryItemUi> _slotPool = new List<InventoryItemUi>();
+
+    private void Awake()
+    {
+        // 시작 시 풀에 슬롯 미리 생성 (Pre-warming)
+        for (int i = 0; i < initialPoolSize; i++)
+        {
+            CreateNewSlot();
+        }
+    }
 
     private void Start()
     {
         _inventory = InventoryManager.Instance;
-
-        if (PlayerRef.Instance != null)    // (주의) PlayerRef 인지 PlayerRefs 인지 확인 필요
+        if (PlayerRef.Instance != null)
             _playerGraft = PlayerRef.Instance.GetComponent<PlayerGraft>();
 
         if (_inventory != null)
             _inventory.OnInventoryChanged += Rebuild;
 
-        Rebuild();
+        OpenForEquip();
     }
 
     private void OnDestroy()
@@ -27,25 +45,70 @@ public class InventoryUI : MonoBehaviour
             _inventory.OnInventoryChanged -= Rebuild;
     }
 
+    // 새 슬롯을 생성하여 풀에 추가하는 내부 메서드
+    private InventoryItemUi CreateNewSlot()
+    {
+        var slotUI = Instantiate(itemPrefab, contentRoot);
+        slotUI.gameObject.SetActive(false);
+        _slotPool.Add(slotUI);
+        return slotUI;
+    }
+
+    public void OpenForEquip()
+    {
+        _onItemSelectedCallback = null;
+        gameObject.SetActive(true);
+        Rebuild();
+    }
+
+    public void OpenForSelection(Action<GraftData> onSelected)
+    {
+        _onItemSelectedCallback = onSelected;
+        gameObject.SetActive(true);
+        Rebuild();
+    }
+
     public void Rebuild()
     {
-        if (_inventory == null || contentRoot == null || itemPrefab == null)
-            return;
+        if (_inventory == null || contentRoot == null || itemPrefab == null) return;
 
-        // 기존 생성된 슬롯들 삭제 (초기화)
-        for (int i = contentRoot.childCount - 1; i >= 0; i--)
+        var dataList = _inventory.Grafts;
+
+        // 1. 모든 슬롯 일단 비활성화
+        for (int i = 0; i < _slotPool.Count; i++)
         {
-            Destroy(contentRoot.GetChild(i).gameObject);
+            _slotPool[i].gameObject.SetActive(false);
         }
 
-        var list = _inventory.Grafts;       // Equipments ➔ Grafts로 변경
-        for (int i = 0; i < list.Count; i++)
+        // 2. 데이터 개수만큼 슬롯 활성화 및 데이터 주입
+        for (int i = 0; i < dataList.Count; i++)
         {
-            var graft = list[i];
+            // 풀이 모자라면 동적 생성
+            if (i >= _slotPool.Count)
+            {
+                CreateNewSlot();
+            }
+
+            var graft = dataList[i];
             if (graft == null) continue;
 
-            var slotUI = Instantiate(itemPrefab, contentRoot);
-            slotUI.Init(graft, _playerGraft); // 이 부분 때문에 InventoryItemUi.cs 에서도 에러가 날 것입니다!
+            _slotPool[i].gameObject.SetActive(true);
+            _slotPool[i].Init(graft, _playerGraft, HandleItemClicked);
+        }
+    }
+
+    private void HandleItemClicked(GraftData clickedData)
+    {
+        if (_onItemSelectedCallback != null)
+        {
+            _onItemSelectedCallback.Invoke(clickedData);
+        }
+        else
+        {
+            if (_playerGraft != null)
+            {
+                _playerGraft.Equip(clickedData);
+            }
         }
     }
 }

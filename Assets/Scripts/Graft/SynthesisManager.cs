@@ -23,14 +23,26 @@ public class SynthesisManager : MonoBehaviour
             return false;
         }
 
-        // 1. 인벤토리에서 재료 아이템 제거 (InventoryManager의 실제 메서드명에 맞춰 수정 필요)
+        // 1. 인벤토리에서 재료 아이템 3개 제거
         foreach (var graft in selectedGrafts)
         {
-            // 예: InventoryManager.Instance.RemoveItem(graft);
+            InventoryManager.Instance.RemoveGraft(graft);
         }
 
-        // 2. 무료 1회 추출 진행
-        ExtractionManager.Instance.ExtractFree(synthesisResultTable);
+        // 2. 무료 1회 추출 진행 (결과물 뽑기 및 연출은 ExtractionManager에 위임)
+        if (ExtractionManager.Instance != null)
+        {
+            ExtractionManager.Instance.ExtractFree(synthesisResultTable);
+        }
+        else
+        {
+            // 만약 ExtractionManager가 씬에 없다면, 백업으로 직접 드랍테이블을 돌려 인벤토리에 넣습니다.
+            GraftData newGraft = synthesisResultTable.GetRandomDrop();
+            if (newGraft != null)
+            {
+                InventoryManager.Instance.AddGraft(newGraft);
+            }
+        }
         
         Debug.Log("Synthesis Complete.");
         return true;

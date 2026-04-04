@@ -20,7 +20,8 @@ public class PlayerController : MonoBehaviour
 
     [Header("Movement")]
     public Transform modelRoot;
-    public float forwardSpeed = 3f;
+    // forwardSpeed 변수는 더 이상 좌표 이동에 쓰이지 않으므로 제거하거나,
+    // 나중에 애니메이션 재생 속도 조절용으로 쓸 수 있게 남겨둘 수 있습니다. (여기서는 제거)
 
     [Header("Debug")]
     public PlayerStateType currentStateType;
@@ -28,15 +29,14 @@ public class PlayerController : MonoBehaviour
     public PlayerStats Stats { get; private set; }
     public IAttackable CurrentTarget { get; set; }
 
-    private HealthSystem _healthSystem; // HealthSystem 참조 추가
+    private HealthSystem _healthSystem; 
     private IPlayerState _currentState;
-    private IPlayerState
-        _idleState, _moveState, _chaseState, _attackState, _deadState;
+    private IPlayerState _idleState, _moveState, _chaseState, _attackState, _deadState;
 
     private void Awake()
     {
         Stats = GetComponent<PlayerStats>();
-        _healthSystem = GetComponent<HealthSystem>(); // 초기화
+        _healthSystem = GetComponent<HealthSystem>(); 
 
         _idleState = new IdleState();
         _moveState = new MoveForwardState();
@@ -49,7 +49,6 @@ public class PlayerController : MonoBehaviour
     {
         if (_healthSystem != null)
         {
-            // HealthSystem의 사망 이벤트 구독
             _healthSystem.OnDied += OnDied;
         }
     }
@@ -58,7 +57,6 @@ public class PlayerController : MonoBehaviour
     {
         if (_healthSystem != null)
         {
-            // HealthSystem의 사망 이벤트 구독 해제
             _healthSystem.OnDied -= OnDied;
         }
     }
@@ -103,26 +101,23 @@ public class PlayerController : MonoBehaviour
 
     public void MoveForward()
     {
-        Vector3 dir = Vector3.forward;
-        transform.Translate(dir * forwardSpeed * Time.deltaTime, Space.World);
-
-        if (modelRoot != null && dir != Vector3.zero)
+        // 런닝머신 기믹: 실제 좌표 이동은 멈추고, 우측을 바라보도록 방향만 고정합니다.
+        Vector3 dir = Vector3.right; 
+        
+        if (modelRoot != null)
             modelRoot.rotation = Quaternion.LookRotation(dir);
     }
 
     public void MoveTowards(Vector3 targetPos)
     {
-        Vector3 toTarget = targetPos - transform.position;
-        toTarget.y = 0f;
-
-        if (toTarget.sqrMagnitude <= 0.0001f)
-            return;
-
-        Vector3 dir = toTarget.normalized;
-        transform.Translate(dir * forwardSpeed * Time.deltaTime, Space.World);
+        // 런닝머신 기믹: 적을 추적하는 상태(Chase)가 되더라도 이동하지 않습니다.
+        // 적이 스스로 다가오기 때문에 방향만 우측으로 유지합니다.
+        Vector3 dir = Vector3.right; 
 
         if (modelRoot != null)
+        {
             modelRoot.rotation = Quaternion.LookRotation(dir);
+        }
     }
 
     public IAttackable FindTarget()
@@ -134,8 +129,6 @@ public class PlayerController : MonoBehaviour
         float bestSqr = maxSqr;
         IAttackable best = null;
 
-        // 임시로 Player의 팀 ID를 0이라고 가정하여 하드코딩 혹은 HealthSystem을 참조하도록 처리할 수 있습니다.
-        // 기존 Stats.TeamId 부분은 게임 로직에 따라 알맞은 위치에서 가져오게 수정이 필요할 수 있습니다.
         int myTeamId = _healthSystem != null ? _healthSystem.TeamId : 0;
 
         foreach (var unit in registry.Units)
@@ -143,7 +136,6 @@ public class PlayerController : MonoBehaviour
             if (unit == null || !unit.IsAlive)
                 continue;
 
-            // 적 체크 시 팀 ID 비교
             if (unit.TeamId == myTeamId)
                 continue;
 

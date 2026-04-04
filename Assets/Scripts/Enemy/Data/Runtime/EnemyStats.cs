@@ -8,40 +8,36 @@ public class EnemyStats : MonoBehaviour, IAttackable
     public EnemyStatsData data;
 
     [Header("Team")]
-    [SerializeField] private int teamId = 1;   // 0 = 플레이어, 1 = 적
+    [SerializeField] private int teamId = 1;
 
     [Header("Runtime")]
     public float curHP;
+    private bool _isDead; // 중복 사망 처리 방지
 
     public event Action OnStatsChanged;
     public event Action OnDied;
 
-    // IAttackable 구현
     public Transform Transform => transform;
-    public bool IsAlive => curHP > 0f;
+    public bool IsAlive => !_isDead && curHP > 0f;
     public int TeamId => teamId;
 
-    // 새로운 EnemyStatsData.cs 변수명에 맞게 매핑
-    public float MaxHP => data != null ? data.MaxHealth : 0f;
-    public float AttackPower => data != null ? data.AttackPower : 0f;
+    // StageManager의 배율을 가져와서 실시간으로 스탯 뻥튀기 적용
+    private float Multiplier => StageManager.Instance != null ? StageManager.Instance.GetStatMultiplier() : 1f;
+
+    public float MaxHP => data != null ? data.MaxHealth * Multiplier : 0f;
+    public float AttackPower => data != null ? data.AttackPower * Multiplier : 0f;
     public float MoveSpeed => data != null ? data.MoveSpeed : 0f;
     public float AttackInterval => data != null ? data.AttackInterval : 1.5f;
     public float AttackRange => data != null ? data.AttackRange : 1.5f;
     
-    // EXP 관련 코드는 삭제하고, 골드는 관측 데이터(DropGold)로 변경
-    public int DropGold => data != null ? data.DropGold : 0;
+    // 재화 드랍량도 스테이지가 오를수록 증가
+    public int DropGold => data != null ? Mathf.RoundToInt(data.DropGold * Multiplier) : 0;
 
-    private void Awake()
-    {
-        // 스포너가 데이터를 나중에 주입할 수도 있으므로 여기서 에러를 띄우지 않습니다.
-        // if (data == null) Debug.LogWarning("EnemyStats: 데이터 대기 중...");
-    }
-
-    // ★ 스포너에서 껍데기에 영혼(데이터)을 주입할 때 호출할 함수
     public void Init(EnemyStatsData newData)
     {
         data = newData;
-        curHP = MaxHP;
+        _isDead = false;
+        curHP = MaxHP; // 스케일링이 적용된 MaxHP로 초기화
         OnStatsChanged?.Invoke();
     }
 
@@ -55,23 +51,11 @@ public class EnemyStats : MonoBehaviour, IAttackable
         AttackableRegistry.Instance?.Unregister(this);
     }
 
-    private void Start()
-    {
-        if (data != null)
-        {
-            curHP = MaxHP;
-            OnStatsChanged?.Invoke();
-        }
-    }
-
     public void TakeDamage(float amount)
     {
         if (!IsAlive) return;
 
-        float before = curHP;
         curHP = Mathf.Clamp(curHP - amount, 0f, MaxHP);
-
-        // 연출을 위한 이벤트 호출
         OnStatsChanged?.Invoke();
 
         if (curHP <= 0f)
@@ -82,20 +66,20 @@ public class EnemyStats : MonoBehaviour, IAttackable
 
     private void Die()
     {
+        _isDead = true; // 플래그 설정
         OnDied?.Invoke();
 
-        // 스테이지 매니저에게 격리(처치) 완료 보고 -> 게이지 상승
         if (StageManager.Instance != null)
         {
             StageManager.Instance.OnEnemyKilled(this);
         }
 
-        // 재화 획득 (CurrencyManager.Instance.AddGold 혹은 AddData 함수명에 맞춰주세요)
         if (CurrencyManager.Instance != null)
         {
             CurrencyManager.Instance.AddData(DropGold);
         }
 
-        Destroy(gameObject);
+        // 주의: 여기서 Destroy(gameObject)를 호출하면 안 됩니다!
+        // 사망 상태(!IsAlive)가 되면 EnemyController.Update()에서 ReturnToPool을 알아서 호출합니다.
     }
 }

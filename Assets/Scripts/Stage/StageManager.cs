@@ -48,11 +48,17 @@ public class StageManager : MonoBehaviour
         SetStage(0);
     }
 
+    // ìŠ¤í…Œì´ì§€ ë ˆë²¨ì— ë”°ë¥¸ ìŠ¤íƒ¯ ë°°ìœ¨ ë°˜í™˜ (ì˜ˆ: 1ìŠ¤í…Œì´ì§€=1.0, 2ìŠ¤í…Œì´ì§€=1.2, 3ìŠ¤í…Œì´ì§€=1.4 ...)
+    public float GetStatMultiplier()
+    {
+        return 1f + (currentStageIndex * 0.2f); // ìŠ¤í…Œì´ì§€ë‹¹ 20% ì¦ê°€
+    }
+
     public void SetStage(int index)
     {
         if (stages == null || stages.Length == 0)
         {
-            Debug.LogWarning("[StageManager] ½ºÅ×ÀÌÁö µ¥ÀÌÅÍ°¡ ¾ø½À´Ï´Ù.", this);
+            Debug.LogWarning("[StageManager] ìŠ¤í…Œì´ì§€ ë°ì´í„°ê°€ ì—†ìŠµë‹ˆë‹¤.", this);
             return;
         }
 
@@ -61,7 +67,7 @@ public class StageManager : MonoBehaviour
         currentKillCount = 0;
         SetPhaseInternal(StagePhase.Normal, invokeStageChanged: true);
 
-        Debug.Log($"[StageManager] Stage º¯°æ ¡æ {CurrentStage.displayName}", this);
+        Debug.Log($"[StageManager] Stage ì„¸íŒ… ë¨ {CurrentStage.displayName}", this);
     }
 
     private void SetPhaseInternal(StagePhase phase, bool invokeStageChanged = false)
@@ -75,25 +81,21 @@ public class StageManager : MonoBehaviour
         OnKillCountChanged?.Invoke();
     }
 
-    // ====== Enemy Á×¾úÀ» ¶§ È£Ãâ ======
     public void OnEnemyKilled(EnemyStats enemy)
     {
         var stage = CurrentStage;
 
         bool isBoss = enemy != null && enemy.data != null && enemy.data.isBoss;
-        Debug.Log($"[StageManager] Enemy Killed. killCount(before)={currentKillCount}, isBoss={isBoss}");
 
         currentKillCount++;
         OnKillCountChanged?.Invoke();
-
-        Debug.Log($"[StageManager] Enemy Killed. killCount(after)={currentKillCount}, phase={currentPhase}, stage={stage?.displayName}");
 
         if (stage == null)
             return;
 
         if (isBoss)
         {
-            Debug.Log("[StageManager] Boss Killed ¡æ ´ÙÀ½ ½ºÅ×ÀÌÁö·Î ÀÌµ¿");
+            Debug.Log("[StageManager] Boss Killed -> ë‹¤ìŒ ìŠ¤í…Œì´ì§€ë¡œ ì´ë™");
             GoToNextStage();
             return;
         }
@@ -106,10 +108,9 @@ public class StageManager : MonoBehaviour
         }
     }
 
-
     private void EnterBossPhase()
     {
-        Debug.Log("[StageManager] Boss Phase ÁøÀÔ");
+        Debug.Log("[StageManager] Boss Phase ì§„ì…");
         SetPhaseInternal(StagePhase.Boss, invokeStageChanged: false);
     }
 
@@ -122,33 +123,23 @@ public class StageManager : MonoBehaviour
 
         if (nextIndex >= stages.Length)
         {
-            Debug.Log("[StageManager] ¸¶Áö¸· ½ºÅ×ÀÌÁö Å¬¸®¾î. ´õ ÀÌ»ó ÁøÇàÇÒ ½ºÅ×ÀÌÁö ¾øÀ½.");
-            // ¸¶Áö¸· ½ºÅ×ÀÌÁö ¹İº¹ÇÏ°í ½ÍÀ¸¸é:
-            // nextIndex = stages.Length - 1;
+            Debug.Log("[StageManager] ë§ˆì§€ë§‰ ìŠ¤í…Œì´ì§€ í´ë¦¬ì–´. ë” ì´ìƒ ì§„í–‰í•  ìŠ¤í…Œì´ì§€ ì—†ìŒ.");
             return;
         }
 
-        Debug.Log($"[StageManager] ´ÙÀ½ ½ºÅ×ÀÌÁö·Î ÀÌµ¿: {stages[nextIndex].displayName}");
         SetStage(nextIndex);
     }
 
-    // ÇÃ·¹ÀÌ¾î Á×¾úÀ» ¶§ È£Ãâ (º¸½º ½ÇÆĞ -> ´Ù½Ã ³ë°¡´Ù)
     public void OnPlayerDied()
     {
-        var stage = CurrentStage;
-        Debug.Log($"[StageManager] ÇÃ·¹ÀÌ¾î »ç¸Á. ÇöÀç ÆäÀÌÁî: {currentPhase}");
-
         if (currentPhase == StagePhase.Boss)
         {
-            // º¸½º ½ÇÆĞ ¡æ °°Àº ½ºÅ×ÀÌÁö Normal Phase·Î ¸®¼Â
             currentKillCount = 0;
             SetPhaseInternal(StagePhase.Normal, invokeStageChanged: false);
-            Debug.Log("[StageManager] º¸½º ½ÇÆĞ ¡æ Normal Phase·Î µ¹¾Æ°¨ (³ë°¡´Ù)");
+            Debug.Log("[StageManager] í”Œë ˆì´ì–´ ì‚¬ë§. Bossì—ì„œ Normal Phaseë¡œ ë³µê·€");
         }
         else
         {
-            // Normal Phase¿¡¼­ Á×¾úÀ¸¸é ±×³É À¯Áö (¿øÇÏ¸é KillCount À¯Áö or ¸®¼Â ¼±ÅÃ °¡´É)
-            // currentKillCount = 0; // ¸®¼ÂÇÏ°í ½ÍÀ¸¸é È°¿ë
             OnKillCountChanged?.Invoke();
         }
     }
