@@ -60,6 +60,7 @@ public class HealthSystem : MonoBehaviour, IAttackable
         currentHealth = Mathf.Max(0f, currentHealth);
         OnHealthChanged?.Invoke();
         SoundManager.Instance?.PlayEnemyHit();
+        GameFeel.Instance?.Shake(0.12f, 0.18f);
         OnDamaged?.Invoke();
         if (currentHealth <= 0f) Kill();
     }

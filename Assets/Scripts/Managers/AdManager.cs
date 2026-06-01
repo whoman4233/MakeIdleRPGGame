@@ -13,7 +13,7 @@ using GoogleMobileAds.Api;
 ///   테스트: ca-app-pub-3940256099942544/5224354917
 ///   실제:   AdMob 콘솔 > 보상형 광고 단위 생성 후 rewardedAdUnitId 교체
 /// </summary>
-public class AdManager : MonoBehaviour
+public class AdManager : MonoBehaviour, IRewardedAdService
 {
     public static AdManager Instance { get; private set; }
 

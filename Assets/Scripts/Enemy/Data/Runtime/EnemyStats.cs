@@ -20,6 +20,7 @@ public class EnemyStats : MonoBehaviour, IAttackable
 
     public Transform Transform => transform;
     public bool IsAlive => !_isDead && curHP > 0f;
+    public bool IsBoss => data != null && data.isBoss;
     public int TeamId => teamId;
 
     private float Multiplier => StageManager.Instance != null ? StageManager.Instance.GetStatMultiplier() : 1f;

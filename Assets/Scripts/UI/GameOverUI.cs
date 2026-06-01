@@ -66,6 +66,23 @@ public class GameOverUI : MonoBehaviour
 
     private void OnClickContinue()
     {
+        SoundManager.Instance?.PlayButtonClick();
+
+        var ads = AdManager.Instance;
+        if (ads != null && ads.IsAdReady())
+        {
+            // 광고 시청 완료 시에만 부활 (취소/실패 시 부활하지 않음)
+            ads.ShowRewardedAd(onReward: Revive);
+        }
+        else
+        {
+            // 광고 미준비 시 폴백: 즉시 부활 (광고 없는 환경/에디터 대비)
+            Revive();
+        }
+    }
+
+    private void Revive()
+    {
         // 체력 회복
         if (_healthSystem != null) _healthSystem.ReviveFull();
         // 플레이어 AI 재개

@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
@@ -13,6 +14,10 @@ public class StageClearUI : MonoBehaviour
     [SerializeField] private CanvasGroup canvasGroup;
     [SerializeField] private TextMeshProUGUI headerText;
     [SerializeField] private TextMeshProUGUI subText;
+
+    [Header("광고 보상 — 데이터 2배")]
+    [SerializeField] private Button doubleRewardButton;   // 인스펙터에서 연결
+    [SerializeField] private long   clearBonusData = 100; // 스테이지 클리어 기본 보너스 데이터
 
     [Header("연출 설정")]
     [SerializeField] private float holdDuration  = 1.5f;
@@ -29,11 +34,32 @@ public class StageClearUI : MonoBehaviour
             _sm.OnStageChanged       += OnStageChanged;
             _sm.OnEndlessLoopStarted += OnEndlessLoop;
         }
+        if (doubleRewardButton != null)
+            doubleRewardButton.onClick.AddListener(OnClickDoubleReward);
+
         SetVisible(false);
+    }
+
+    // 스테이지 클리어 시 광고 시청 → 보너스 데이터 2배 지급
+    private void OnClickDoubleReward()
+    {
+        SoundManager.Instance?.PlayButtonClick();
+        var ads = AdManager.Instance;
+        if (ads == null || !ads.IsAdReady()) return;
+
+        ads.ShowRewardedAd(onReward: () =>
+        {
+            // 현재 스테이지 배율을 반영해 보너스 지급 (2배 = 보너스를 그대로 한 번 더)
+            CurrencyManager.Instance?.AddData(clearBonusData * 2);
+            if (doubleRewardButton != null) doubleRewardButton.interactable = false;
+        });
     }
 
     private void OnDestroy()
     {
+        if (doubleRewardButton != null)
+            doubleRewardButton.onClick.RemoveListener(OnClickDoubleReward);
+
         if (_sm != null)
         {
             _sm.OnStageChanged       -= OnStageChanged;
@@ -103,5 +129,12 @@ public class StageClearUI : MonoBehaviour
         if (canvasGroup == null) return;
         canvasGroup.alpha = show ? 1f : 0f;
         canvasGroup.gameObject.SetActive(show);
+
+        if (doubleRewardButton != null)
+        {
+            bool adReady = AdManager.Instance != null && AdManager.Instance.IsAdReady();
+            doubleRewardButton.gameObject.SetActive(show && adReady);
+            doubleRewardButton.interactable = show && adReady;
+        }
     }
 }

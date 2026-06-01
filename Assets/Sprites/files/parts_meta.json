@@ -1,0 +1,188 @@
+{
+  "A": {
+    "Head": {
+      "size": [
+        333,
+        166
+      ],
+      "norm_center": [
+        0.501,
+        0.111
+      ],
+      "norm_top": 0.0,
+      "norm_h": 0.222
+    },
+    "Core": {
+      "size": [
+        182,
+        219
+      ],
+      "norm_center": [
+        0.499,
+        0.371
+      ],
+      "norm_top": 0.224,
+      "norm_h": 0.294
+    },
+    "ArmL": {
+      "size": [
+        256,
+        135
+      ],
+      "norm_center": [
+        0.183,
+        0.314
+      ],
+      "norm_top": 0.224,
+      "norm_h": 0.181
+    },
+    "ArmR": {
+      "size": [
+        258,
+        135
+      ],
+      "norm_center": [
+        0.815,
+        0.314
+      ],
+      "norm_top": 0.224,
+      "norm_h": 0.181
+    },
+    "Legs": {
+      "size": [
+        322,
+        358
+      ],
+      "norm_center": [
+        0.5,
+        0.759
+      ],
+      "norm_top": 0.519,
+      "norm_h": 0.481
+    }
+  },
+  "B": {
+    "Head": {
+      "size": [
+        757,
+        149
+      ],
+      "norm_center": [
+        0.502,
+        0.112
+      ],
+      "norm_top": 0.0,
+      "norm_h": 0.223
+    },
+    "Core": {
+      "size": [
+        182,
+        195
+      ],
+      "norm_center": [
+        0.499,
+        0.371
+      ],
+      "norm_top": 0.225,
+      "norm_h": 0.293
+    },
+    "ArmL": {
+      "size": [
+        288,
+        29
+      ],
+      "norm_center": [
+        0.189,
+        0.246
+      ],
+      "norm_top": 0.225,
+      "norm_h": 0.042
+    },
+    "ArmR": {
+      "size": [
+        270,
+        28
+      ],
+      "norm_center": [
+        0.796,
+        0.245
+      ],
+      "norm_top": 0.225,
+      "norm_h": 0.041
+    },
+    "Legs": {
+      "size": [
+        362,
+        320
+      ],
+      "norm_center": [
+        0.521,
+        0.759
+      ],
+      "norm_top": 0.519,
+      "norm_h": 0.481
+    }
+  },
+  "C": {
+    "Head": {
+      "size": [
+        318,
+        178
+      ],
+      "norm_center": [
+        0.508,
+        0.117
+      ],
+      "norm_top": 0.0,
+      "norm_h": 0.233
+    },
+    "Core": {
+      "size": [
+        214,
+        201
+      ],
+      "norm_center": [
+        0.499,
+        0.366
+      ],
+      "norm_top": 0.235,
+      "norm_h": 0.264
+    },
+    "ArmL": {
+      "size": [
+        251,
+        292
+      ],
+      "norm_center": [
+        0.175,
+        0.426
+      ],
+      "norm_top": 0.235,
+      "norm_h": 0.383
+    },
+    "ArmR": {
+      "size": [
+        249,
+        292
+      ],
+      "norm_center": [
+        0.823,
+        0.426
+      ],
+      "norm_top": 0.235,
+      "norm_h": 0.383
+    },
+    "Legs": {
+      "size": [
+        717,
+        381
+      ],
+      "norm_center": [
+        0.5,
+        0.75
+      ],
+      "norm_top": 0.499,
+      "norm_h": 0.501
+    }
+  }
+}

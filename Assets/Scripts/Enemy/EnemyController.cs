@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 [RequireComponent(typeof(EnemyStats))]
 public class EnemyController : MonoBehaviour
@@ -99,6 +99,13 @@ public class EnemyController : MonoBehaviour
         if (_pendingReturn) return;
         _pendingReturn = true;
         SoundManager.Instance?.PlayEnemyDeath();
+
+        // 보스 처치 순간에만 강한 타격감 연출 (일반 몹은 생략 — 과하면 촌스러움)
+        if (_stats != null && _stats.IsBoss)
+        {
+            GameFeel.Instance?.HitStop(0.08f);
+            GameFeel.Instance?.Shake(0.35f, 0.4f);
+        }
 
         // EnemyMotion이 있으면 페이드아웃 완료 후 반환 콜백 위임
         // 없으면 즉시 반환
