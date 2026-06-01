@@ -31,7 +31,7 @@ public class EnemyMotion : MonoBehaviour
 
     private float   _yOffset;
     private float   _baseY;
-    private float   _baseX;
+    private float   _appliedXOffset;  // 지난 프레임에 X에 얹은 넉백/대시 오프셋 (전진과 분리)
     private Vector3 _baseScale;
     private float   _swayTimer;
     private bool    _isDead;
@@ -55,7 +55,7 @@ public class EnemyMotion : MonoBehaviour
         _scaleCaptured = false;
         _swayTimer     = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
         _baseY         = transform.localPosition.y;
-        _baseX         = transform.localPosition.x;
+        _appliedXOffset = 0f;
         _baseScale     = transform.localScale;
         _yOffset       = 0f;
         _xOffset       = 0f;
@@ -107,7 +107,11 @@ public class EnemyMotion : MonoBehaviour
                 transform.localRotation = Quaternion.identity;
             }
 
-            transform.localPosition = new Vector3(_baseX + _xOffset, _baseY + _yOffset, transform.localPosition.z);
+            // 전진(Translate)이 옮긴 현재 X는 보존하고, 넉백/대시 오프셋만 델타로 얹는다.
+            // (지난 프레임 오프셋을 빼고 이번 프레임 오프셋을 더해 매 프레임 누적되지 않게 함)
+            float curX = transform.localPosition.x - _appliedXOffset;
+            transform.localPosition = new Vector3(curX + _xOffset, _baseY + _yOffset, transform.localPosition.z);
+            _appliedXOffset = _xOffset;
         }
     }
 
@@ -201,6 +205,7 @@ public class EnemyMotion : MonoBehaviour
         _scaleCaptured          = false;
         _yOffset                = 0f;
         _xOffset                = 0f;
+        _appliedXOffset         = 0f;
         transform.localRotation = Quaternion.identity;
         if (_sr != null) _sr.color = Color.white;
     }

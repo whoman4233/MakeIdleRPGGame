@@ -27,7 +27,11 @@ public class DamagePopup : MonoBehaviour
         _tmp.text      = isCrit ? "CRIT " + Mathf.RoundToInt(damage).ToString() : Mathf.RoundToInt(damage).ToString();
         _tmp.color     = isCrit ? critColor : normalColor;
         _tmp.fontSize  = isCrit ? 4f * critScale : 4f;
+        transform.localScale = Vector3.zero;   // 스케일 팝 연출 시작점
         gameObject.SetActive(true);
+
+        // 크리티컬은 묵직하게 — 아주 약한 셰이크 연동
+        if (isCrit) GameFeel.Instance?.Shake(0.08f, 0.08f);
 
         if (_anim != null) StopCoroutine(_anim);
         _anim = StartCoroutine(AnimRoutine());
@@ -35,6 +39,20 @@ public class DamagePopup : MonoBehaviour
 
     private IEnumerator AnimRoutine()
     {
+        // 등장 스케일 팝: 0 → 1.2 → 1.0 (빠르게 튀어오름)
+        float popDur = 0.12f, pt = 0f;
+        while (pt < popDur)
+        {
+            pt += Time.deltaTime;
+            float k = pt / popDur;
+            float s = (k < 0.6f) ? Mathf.Lerp(0f, 1.2f, k / 0.6f)
+                                 : Mathf.Lerp(1.2f, 1.0f, (k - 0.6f) / 0.4f);
+            transform.localScale = Vector3.one * s;
+            transform.position += Vector3.up * riseSpeed * 0.5f * Time.deltaTime;
+            yield return null;
+        }
+        transform.localScale = Vector3.one;
+
         float elapsed = 0f;
         bool keepRunning = true;
         while (keepRunning)
