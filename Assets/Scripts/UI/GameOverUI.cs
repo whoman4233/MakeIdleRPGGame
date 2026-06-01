@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -9,90 +10,67 @@ public class GameOverUI : MonoBehaviour
     public CanvasGroup panelGroup;
     public TextMeshProUGUI messageText;
     public Button continueButton;
-
     public string defaultMessage = "YOU DIED";
+
+    private HealthSystem _healthSystem;
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
     }
 
-    private void Start()
+    private IEnumerator Start()
     {
-        if (panelGroup != null)
-        {
-            panelGroup.alpha = 0f;
-            panelGroup.gameObject.SetActive(false);
-        }
+        if (panelGroup != null) { panelGroup.alpha = 0f; panelGroup.gameObject.SetActive(false); }
+        if (continueButton != null) continueButton.onClick.AddListener(OnClickContinue);
 
-        if (continueButton != null)
-            continueButton.onClick.AddListener(OnClickContinue);
+        yield return null;
 
-        // Player ���� �̺�Ʈ ����
-        if (PlayerRef.Instance != null && PlayerRef.Instance.Stats != null)
-        {
-            PlayerRef.Instance.Health.OnDied += OnPlayerDied;
-        }
+        var playerRef = PlayerRef.Instance ?? FindObjectOfType<PlayerRef>();
+        if (playerRef != null)
+            _healthSystem = playerRef.Health ?? playerRef.GetComponent<HealthSystem>();
+
+        if (_healthSystem != null)
+            _healthSystem.OnDied += OnPlayerDied;
         else
-        {
-            Debug.LogWarning("[GameOverUI] PlayerRef Ǵ PlayerStats ã ߽ϴ.");
-        }
+            GameLog.Warn("[GameOverUI] HealthSystem 없음");
     }
 
     private void OnDestroy()
     {
-        if (PlayerRef.Instance != null && PlayerRef.Instance.Stats != null)
-        {
-            PlayerRef.Instance.Health.OnDied -= OnPlayerDied;
-        }
+        if (_healthSystem != null) _healthSystem.OnDied -= OnPlayerDied;
     }
 
     private void OnPlayerDied()
     {
+        // StageManager에 플레이어 사망 알림 (보스페이즈 → 노멀 복귀)
+        StageManager.Instance?.OnPlayerDied();
         Show(defaultMessage);
     }
 
     public void Show(string msg)
     {
         if (panelGroup == null) return;
-
-        if (messageText != null)
-            messageText.text = msg;
-
+        if (messageText != null) messageText.text = msg;
         panelGroup.gameObject.SetActive(true);
         panelGroup.alpha = 1f;
-
-        // ���� �Ͻ����� �ϰ� ������:
-        // Time.timeScale = 0f;
     }
 
     public void Hide()
     {
         if (panelGroup == null) return;
-
         panelGroup.alpha = 0f;
         panelGroup.gameObject.SetActive(false);
     }
 
     private void OnClickContinue()
     {
-        // Time.timeScale = 1f; // 일시정지를 사용했다면 해제
-
-        // 플레이어 부활 로직 호출
-        if (PlayerRef.Instance != null && PlayerRef.Instance.Health != null)
-        {
-            // Stats가 아닌 Health 컴포넌트의 ReviveFull을 호출합니다.
-            PlayerRef.Instance.Health.ReviveFull();
-            
-            // 만약 플레이어의 상태를 다시 MoveForward 등으로 바꿔야 한다면:
-            // PlayerRef.Instance.Controller.ChangeState(PlayerStateType.MoveForward);
-        }
-
+        // 체력 회복
+        if (_healthSystem != null) _healthSystem.ReviveFull();
+        // 플레이어 AI 재개
+        var ctrl = PlayerRef.Instance?.Controller;
+        if (ctrl != null) ctrl.ChangeState(PlayerStateType.MoveForward);
         Hide();
     }
 }

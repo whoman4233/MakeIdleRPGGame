@@ -19,7 +19,7 @@ public class SynthesisManager : MonoBehaviour
     {
         if (selectedGrafts == null || selectedGrafts.Count != 3)
         {
-            Debug.Log("Synthesis requires exactly 3 grafts.");
+            GameLog.Log("Synthesis requires exactly 3 grafts.");
             return false;
         }
 
@@ -44,7 +44,7 @@ public class SynthesisManager : MonoBehaviour
             }
         }
         
-        Debug.Log("Synthesis Complete.");
+        GameLog.Log("Synthesis Complete.");
         return true;
     }
 }

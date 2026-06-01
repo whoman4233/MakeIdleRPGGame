@@ -7,8 +7,12 @@ public class UpgradeData : ScriptableObject
     public StatModifier modifier;
 
     public int level = 0;
+    [Tooltip("0 = 무제한")]
+    public int maxLevel = 0;
     public int baseCost = 10;
     public float costMultiplier = 1.5f;
+
+    public bool IsMaxLevel => maxLevel > 0 && level >= maxLevel;
 
     public int GetCurrentCost()
     {

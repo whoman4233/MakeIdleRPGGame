@@ -1,15 +1,7 @@
 using System;
 using UnityEngine;
 
-// 기존 EquipmentSlotType을 대체할 괴이 육체 이식 부위
-public enum GraftSlotType
-{
-    Head,
-    Core,
-    ArmL,
-    ArmR,
-    Legs
-}
+public enum GraftSlotType { Head, Core, ArmL, ArmR, Legs }
 
 [RequireComponent(typeof(PlayerStats))]
 public class PlayerGraft : MonoBehaviour
@@ -32,7 +24,6 @@ public class PlayerGraft : MonoBehaviour
 
     private void Start()
     {
-        // 시작 시 장착된 모든 괴이 육체의 스탯 적용
         ReapplyAllModifiers();
     }
 
@@ -52,8 +43,7 @@ public class PlayerGraft : MonoBehaviour
     public void Equip(GraftData newGraft)
     {
         if (newGraft == null) return;
-
-        switch (newGraft.slotType) // GraftData에 public GraftSlotType slotType; 필드가 있어야 합니다.
+        switch (newGraft.slotType)
         {
             case GraftSlotType.Head: ReplaceSlot(ref headGraft, newGraft); break;
             case GraftSlotType.Core: ReplaceSlot(ref coreGraft, newGraft); break;
@@ -61,30 +51,31 @@ public class PlayerGraft : MonoBehaviour
             case GraftSlotType.ArmR: ReplaceSlot(ref armRGraft, newGraft); break;
             case GraftSlotType.Legs: ReplaceSlot(ref legsGraft, newGraft); break;
         }
-
+        stats.NotifyStatsChanged();
         OnGraftChanged?.Invoke();
     }
 
     private void ReplaceSlot(ref GraftData slotRef, GraftData newGraft)
     {
-        // 기존 이식물 적출 (스탯 제거)
-        if (slotRef != null)
-        {
-            RemoveGraftModifiers(slotRef);
-        }
-
+        if (slotRef != null) RemoveGraftModifiers(slotRef);
         slotRef = newGraft;
-
-        // 새 이식물 장착 (스탯 적용)
-        if (slotRef != null)
-        {
-            ApplyGraftModifiers(slotRef);
-        }
+        if (slotRef != null) ApplyGraftModifiers(slotRef);
     }
 
+    // 모디파이어 제거만 — 슬롯 참조는 건드리지 않음 (버그 수정 핵심)
+    public void RemoveAllModifiers()
+    {
+        if (headGraft != null) RemoveGraftModifiers(headGraft);
+        if (coreGraft != null) RemoveGraftModifiers(coreGraft);
+        if (armLGraft != null) RemoveGraftModifiers(armLGraft);
+        if (armRGraft != null) RemoveGraftModifiers(armRGraft);
+        if (legsGraft != null) RemoveGraftModifiers(legsGraft);
+    }
+
+    // 슬롯 참조를 보존한 채 모디파이어 재적용
     public void ReapplyAllModifiers()
     {
-        // 세이브/로드 후 초기화 시 기존 스탯을 모두 날리고 새로 덮어씌움
+        RemoveAllModifiers();
         if (headGraft != null) ApplyGraftModifiers(headGraft);
         if (coreGraft != null) ApplyGraftModifiers(coreGraft);
         if (armLGraft != null) ApplyGraftModifiers(armLGraft);
@@ -92,34 +83,38 @@ public class PlayerGraft : MonoBehaviour
         if (legsGraft != null) ApplyGraftModifiers(legsGraft);
     }
 
-    // --- 새로 추가된 모디파이어 직접 제어 로직 ---
+    // 세이브 로드 전용 — 슬롯 교체 후 재적용
+    public void LoadEquipped(GraftData head, GraftData core, GraftData armL, GraftData armR, GraftData legs)
+    {
+        RemoveAllModifiers();   // 기존 모디파이어 해제 (슬롯은 유지)
+        headGraft = head;       // 슬롯 교체
+        coreGraft = core;
+        armLGraft = armL;
+        armRGraft = armR;
+        legsGraft = legs;
+        ReapplyAllModifiers(); // 새 슬롯 기준으로 재적용
+        stats.NotifyStatsChanged();
+        OnGraftChanged?.Invoke();
+    }
 
     private void ApplyGraftModifiers(GraftData graft)
     {
-        if (graft.modifiers == null) return;
-
+        if (graft == null || graft.modifiers == null) return;
         foreach (var mod in graft.modifiers)
         {
             Stat targetStat = stats.GetStat(mod.statType);
             if (targetStat != null)
-            {
-                // source를 현재 graft로 지정하여 추가
-                var newMod = new StatModifier(mod.statType, mod.value, mod.type, graft);
-                targetStat.AddModifier(newMod);
-            }
+                targetStat.AddModifier(new StatModifier(mod.statType, mod.value, mod.type, graft));
         }
     }
 
     private void RemoveGraftModifiers(GraftData graft)
     {
-        // 모든 스탯 타입을 순회하며 해당 이식물(graft)이 소스인 모디파이어를 제거
+        if (graft == null) return;
         foreach (StatType type in Enum.GetValues(typeof(StatType)))
         {
             Stat targetStat = stats.GetStat(type);
-            if (targetStat != null)
-            {
-                targetStat.RemoveAllModifiersFromSource(graft);
-            }
+            targetStat?.RemoveAllModifiersFromSource(graft);
         }
     }
 }

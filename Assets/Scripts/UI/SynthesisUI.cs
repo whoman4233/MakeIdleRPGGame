@@ -7,6 +7,7 @@ public class SynthesisUI : MonoBehaviour
     [Header("UI References")]
     public Image[] slotImages = new Image[3]; 
     public Button synthesizeButton;
+    public Button adSynthesisButton; // 광고 시청 → 무료 합성 1회
 
     [Header("Settings")]
     public Sprite defaultSlotSprite; 
@@ -19,6 +20,9 @@ public class SynthesisUI : MonoBehaviour
         {
             synthesizeButton.onClick.AddListener(OnSynthesizeClicked);
         }
+
+        if (adSynthesisButton != null)
+            adSynthesisButton.onClick.AddListener(OnAdSynthesisClicked);
         UpdateSlotsUI();
     }
 
@@ -40,7 +44,7 @@ public class SynthesisUI : MonoBehaviour
         {
             if (_selectedGrafts.Count >= 3)
             {
-                Debug.Log("[SynthesisUI] 이미 3개의 육체를 선택했습니다.");
+                GameLog.Log("[SynthesisUI] 이미 3개의 육체를 선택했습니다.");
                 return;
             }
             _selectedGrafts.Add(graft);
@@ -68,13 +72,34 @@ public class SynthesisUI : MonoBehaviour
         }
 
         if (synthesizeButton != null)
-        {
             synthesizeButton.interactable = (_selectedGrafts.Count == 3);
-        }
+
+        if (adSynthesisButton != null)
+            adSynthesisButton.interactable = (_selectedGrafts.Count == 3) && (AdManager.Instance?.IsAdReady() ?? false);
+    }
+
+    private void OnAdSynthesisClicked()
+    {
+        if (_selectedGrafts.Count != 3) return;
+        SoundManager.Instance?.PlayButtonClick();
+        AdManager.Instance?.ShowRewardedAd(
+            onReward: () =>
+            {
+                // 광고 보상: 선택된 3개로 무료 합성
+                bool ok = SynthesisManager.Instance.TrySynthesis(_selectedGrafts);
+                if (ok)
+                {
+                    SoundManager.Instance?.PlaySynthesis();
+                    _selectedGrafts.Clear();
+                    UpdateSlotsUI();
+                }
+            }
+        );
     }
 
     private void OnSynthesizeClicked()
     {
+        SoundManager.Instance?.PlaySynthesis();
         if (_selectedGrafts.Count != 3) return;
 
         bool isSuccess = SynthesisManager.Instance.TrySynthesis(_selectedGrafts);

@@ -1,12 +1,7 @@
 using System;
 using UnityEngine;
 
-public enum StagePhase
-{
-    Normal,
-    Boss,
-    Cleared
-}
+public enum StagePhase { Normal, Boss, Cleared }
 
 public class StageManager : MonoBehaviour
 {
@@ -15,118 +10,122 @@ public class StageManager : MonoBehaviour
     [Header("Stage List")]
     public StageData[] stages;
 
+    [Header("Endless Mode")]
+    [Tooltip("마지막 스테이지 클리어 후 계속 반복 (배율 누적)")]
+    public bool endlessMode = true;
+    [Tooltip("엔드리스 반복당 추가 배율 (0.1 = 10%씩 증가)")]
+    public float endlessExtraMultiplier = 0.15f;
+
     [Header("Runtime")]
     [SerializeField] private int currentStageIndex;
     [SerializeField] private int currentKillCount;
     [SerializeField] private StagePhase currentPhase = StagePhase.Normal;
+    [SerializeField] private int endlessLoopCount;   // 몇 번 반복했는지
 
     public StageData CurrentStage =>
-        (stages != null && stages.Length > 0 && currentStageIndex >= 0 && currentStageIndex < stages.Length)
-            ? stages[currentStageIndex]
-            : null;
+        (stages != null && stages.Length > 0 &&
+         currentStageIndex >= 0 && currentStageIndex < stages.Length)
+            ? stages[currentStageIndex] : null;
 
-    public StagePhase CurrentPhase => currentPhase;
+    public StagePhase CurrentPhase  => currentPhase;
+    public int CurrentStageIndex    => currentStageIndex;
+    public int EndlessLoopCount     => endlessLoopCount;
 
-    public event Action OnStageChanged;
-    public event Action OnKillCountChanged;
-    public event Action<StagePhase> OnPhaseChanged;
+    public event Action              OnStageChanged;
+    public event Action              OnKillCountChanged;
+    public event Action<StagePhase>  OnPhaseChanged;
+    /// <summary>엔드리스 루프 진입 시 발행 (루프 횟수 포함)</summary>
+    public event Action<int>         OnEndlessLoopStarted;
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
         DontDestroyOnLoad(gameObject);
     }
 
     private void Start()
     {
+        // 기본값 0 세팅. SaveManager.LoadGame()이 이후 덮어씀 (한 프레임 지연 로드).
         SetStage(0);
     }
 
-    // 스테이지 레벨에 따른 스탯 배율 반환 (예: 1스테이지=1.0, 2스테이지=1.2, 3스테이지=1.4 ...)
+    
+    /// <summary>스테이지 레벨 + 엔드리스 루프 배율 합산</summary>
     public float GetStatMultiplier()
     {
-        return 1f + (currentStageIndex * 0.2f); // 스테이지당 20% 증가
+        float stageBonus   = currentStageIndex * 0.2f;
+        float endlessBonus = endlessLoopCount  * endlessExtraMultiplier;
+        return 1f + stageBonus + endlessBonus;
     }
 
     public void SetStage(int index)
     {
         if (stages == null || stages.Length == 0)
         {
-            Debug.LogWarning("[StageManager] 스테이지 데이터가 없습니다.", this);
+            GameLog.Warn("[StageManager] 스테이지 데이터가 없습니다.", this);
             return;
         }
-
         index = Mathf.Clamp(index, 0, stages.Length - 1);
         currentStageIndex = index;
-        currentKillCount = 0;
+        currentKillCount  = 0;
         SetPhaseInternal(StagePhase.Normal, invokeStageChanged: true);
-
-        Debug.Log($"[StageManager] Stage 세팅 됨 {CurrentStage.displayName}", this);
     }
 
     private void SetPhaseInternal(StagePhase phase, bool invokeStageChanged = false)
     {
         currentPhase = phase;
-
-        if (invokeStageChanged)
-            OnStageChanged?.Invoke();
-
+        if (invokeStageChanged) OnStageChanged?.Invoke();
         OnPhaseChanged?.Invoke(currentPhase);
         OnKillCountChanged?.Invoke();
     }
 
     public void OnEnemyKilled(EnemyStats enemy)
     {
-        var stage = CurrentStage;
-
         bool isBoss = enemy != null && enemy.data != null && enemy.data.isBoss;
-
         currentKillCount++;
         OnKillCountChanged?.Invoke();
 
-        if (stage == null)
-            return;
+        var stage = CurrentStage;
+        if (stage == null) return;
 
-        if (isBoss)
-        {
-            Debug.Log("[StageManager] Boss Killed -> 다음 스테이지로 이동");
-            GoToNextStage();
-            return;
-        }
+        if (isBoss) { GoToNextStage(); return; }
 
         if (currentPhase == StagePhase.Normal &&
             stage.normalKillToSummonBoss > 0 &&
             currentKillCount >= stage.normalKillToSummonBoss)
-        {
             EnterBossPhase();
-        }
     }
 
     private void EnterBossPhase()
     {
-        Debug.Log("[StageManager] Boss Phase 진입");
-        SetPhaseInternal(StagePhase.Boss, invokeStageChanged: false);
+        SoundManager.Instance?.PlayBossWarning();
+        SetPhaseInternal(StagePhase.Boss);
     }
 
     public void GoToNextStage()
     {
-        int nextIndex = currentStageIndex + 1;
+        if (stages == null || stages.Length == 0) return;
 
-        if (stages == null || stages.Length == 0)
-            return;
+        int nextIndex = currentStageIndex + 1;
 
         if (nextIndex >= stages.Length)
         {
-            Debug.Log("[StageManager] 마지막 스테이지 클리어. 더 이상 진행할 스테이지 없음.");
+            if (endlessMode)
+            {
+                endlessLoopCount++;
+                SoundManager.Instance?.PlayStageUp();
+                SetStage(0);                          // 처음 스테이지로 루프
+                OnEndlessLoopStarted?.Invoke(endlessLoopCount);
+            }
+            else
+            {
+                SetPhaseInternal(StagePhase.Cleared, invokeStageChanged: true);
+            }
             return;
         }
 
+        SoundManager.Instance?.PlayStageUp();
         SetStage(nextIndex);
     }
 
@@ -135,8 +134,7 @@ public class StageManager : MonoBehaviour
         if (currentPhase == StagePhase.Boss)
         {
             currentKillCount = 0;
-            SetPhaseInternal(StagePhase.Normal, invokeStageChanged: false);
-            Debug.Log("[StageManager] 플레이어 사망. Boss에서 Normal Phase로 복귀");
+            SetPhaseInternal(StagePhase.Normal);
         }
         else
         {
@@ -145,4 +143,9 @@ public class StageManager : MonoBehaviour
     }
 
     public int GetCurrentKillCount() => currentKillCount;
+
+    private void OnApplicationPause(bool paused)
+    {
+        if (paused) SaveManager.Instance?.SaveGame();
+    }
 }

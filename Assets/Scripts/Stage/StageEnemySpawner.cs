@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -6,40 +7,38 @@ public class StageEnemySpawner : MonoBehaviour
 {
     [Header("Spawn Setup")]
     public EnemyController masterEnemyPrefab;
-    public List<EnemyStatsData> spawnableEnemies;
-    
-    // 이번에 테스트를 위해 추가된 보스 데이터 연결 슬롯
-    [Header("Boss Setup")]
-    public EnemyStatsData testBossData; 
 
     [Header("Spawn Rules")]
-    public float spawnInterval = 3f;
-    public float spawnOffsetX = 15f;
+    public float spawnOffsetX  = 15f;
 
     [Header("Pooling Settings")]
     public int initialPoolSize = 10;
 
+    public event Action<EnemyStats> OnBossSpawned;
+
     private Coroutine _spawnRoutine;
-    private Queue<EnemyController> _enemyPool = new Queue<EnemyController>();
+    private readonly Queue<EnemyController> _enemyPool = new Queue<EnemyController>();
+    private float _spawnInterval = 3f;
 
     private void Awake()
     {
         for (int i = 0; i < initialPoolSize; i++)
         {
-            EnemyController enemy = Instantiate(masterEnemyPrefab, transform);
-            enemy.gameObject.SetActive(false);
-            _enemyPool.Enqueue(enemy);
+            var e = Instantiate(masterEnemyPrefab, transform);
+            e.gameObject.SetActive(false);
+            _enemyPool.Enqueue(e);
         }
     }
 
     private void Start()
     {
-        if (StageManager.Instance != null)
+        var sm = StageManager.Instance ?? FindObjectOfType<StageManager>();
+        if (sm != null)
         {
-            // 스테이지 페이즈(보스 등장 등) 변경 이벤트 구독
-            StageManager.Instance.OnPhaseChanged += HandlePhaseChanged;
+            sm.OnPhaseChanged += HandlePhaseChanged;
+            sm.OnStageChanged += HandleStageChanged;
         }
-
+        HandleStageChanged(); // 초기 스폰 간격 적용
         StartSpawning();
     }
 
@@ -48,21 +47,20 @@ public class StageEnemySpawner : MonoBehaviour
         if (StageManager.Instance != null)
         {
             StageManager.Instance.OnPhaseChanged -= HandlePhaseChanged;
+            StageManager.Instance.OnStageChanged -= HandleStageChanged;
         }
     }
 
-    // 페이즈가 변경될 때 스폰 로직을 제어합니다.
+    private void HandleStageChanged()
+    {
+        var stage = StageManager.Instance?.CurrentStage;
+        if (stage != null) _spawnInterval = stage.spawnIntervalNormal;
+    }
+
     private void HandlePhaseChanged(StagePhase newPhase)
     {
-        if (newPhase == StagePhase.Boss)
-        {
-            StopSpawning(); // 일반 스폰 정지
-            SpawnBoss();    // 보스 1마리 소환
-        }
-        else if (newPhase == StagePhase.Normal)
-        {
-            StartSpawning(); // 일반 스폰 재개
-        }
+        if (newPhase == StagePhase.Boss)        { StopSpawning(); SpawnBoss(); }
+        else if (newPhase == StagePhase.Normal) { StartSpawning(); }
     }
 
     public void StartSpawning()
@@ -73,65 +71,71 @@ public class StageEnemySpawner : MonoBehaviour
 
     public void StopSpawning()
     {
-        if (_spawnRoutine != null)
-        {
-            StopCoroutine(_spawnRoutine);
-            _spawnRoutine = null;
-        }
+        if (_spawnRoutine != null) { StopCoroutine(_spawnRoutine); _spawnRoutine = null; }
     }
 
     private IEnumerator SpawnRoutine()
     {
-        while (true)
+        bool keepGoing = true;
+        while (keepGoing)
         {
-            SpawnEnemy(false); // 일반 몬스터 스폰
-            yield return new WaitForSeconds(spawnInterval);
+            var stage = StageManager.Instance?.CurrentStage;
+            if (stage != null && stage.normalEnemies != null && stage.normalEnemies.Count > 0)
+                SpawnEnemy(false);
+            else
+                GameLog.Warn("[StageEnemySpawner] 현재 스테이지에 normalEnemies 없음");
+            yield return new WaitForSeconds(_spawnInterval);
         }
     }
 
     private void SpawnBoss()
     {
-        if (testBossData == null)
-        {
-            Debug.LogWarning("[Spawner] 보스 데이터가 연결되지 않았습니다!");
-            return;
-        }
-        SpawnEnemy(true); // 보스 스폰
+        var stage = StageManager.Instance?.CurrentStage;
+        if (stage == null || stage.bossEnemy == null)
+        { GameLog.Warn("[Spawner] 보스 데이터 없음!"); return; }
+        SpawnEnemy(true, stage.bossEnemy);
     }
 
-    // isBoss 플래그에 따라 주입할 데이터를 결정합니다.
-    private void SpawnEnemy(bool isBoss)
+    private void SpawnEnemy(bool isBoss, EnemyStatsData overrideData = null)
     {
-        if (masterEnemyPrefab == null) return;
-        if (PlayerRef.Instance == null) return;
+        if (masterEnemyPrefab == null || PlayerRef.Instance == null) return;
 
         Vector3 spawnPos = PlayerRef.Instance.transform.position;
-        spawnPos.x += spawnOffsetX;
-        spawnPos.y = 0f;
-        spawnPos.z = 0f;
+        spawnPos.x += spawnOffsetX; spawnPos.y = 0f; spawnPos.z = 0f;
 
-        EnemyController spawnTarget = null;
+        EnemyController target = _enemyPool.Count > 0
+            ? _enemyPool.Dequeue()
+            : Instantiate(masterEnemyPrefab, spawnPos, Quaternion.identity, transform);
 
-        if (_enemyPool.Count > 0)
+        target.transform.position = spawnPos;
+        target.gameObject.SetActive(true);
+
+        EnemyStatsData data = overrideData;
+        if (data == null)
         {
-            spawnTarget = _enemyPool.Dequeue();
-            spawnTarget.transform.position = spawnPos;
-            spawnTarget.gameObject.SetActive(true);
+            var stage = StageManager.Instance?.CurrentStage;
+            if (stage != null && stage.normalEnemies.Count > 0)
+                data = stage.normalEnemies[UnityEngine.Random.Range(0, stage.normalEnemies.Count)];
         }
-        else
+        if (data == null) return;
+
+        target.Init(data, this);
+
+        if (isBoss)
         {
-            spawnTarget = Instantiate(masterEnemyPrefab, spawnPos, Quaternion.identity, transform);
+            var stats = target.GetComponent<EnemyStats>();
+            OnBossSpawned?.Invoke(stats);
         }
-        
-        // 보스면 보스 데이터, 아니면 리스트에서 랜덤 데이터
-        EnemyStatsData dataToInject = isBoss ? testBossData : spawnableEnemies[Random.Range(0, spawnableEnemies.Count)];
-        
-        spawnTarget.Init(dataToInject, this);
     }
+
+    private const int MAX_POOL_SIZE = 30;
 
     public void ReturnToPool(EnemyController enemy)
     {
         enemy.gameObject.SetActive(false);
-        _enemyPool.Enqueue(enemy);
+        if (_enemyPool.Count < MAX_POOL_SIZE)
+            _enemyPool.Enqueue(enemy);
+        else
+            Destroy(enemy.gameObject);
     }
 }

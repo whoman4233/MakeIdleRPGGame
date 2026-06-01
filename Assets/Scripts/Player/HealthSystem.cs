@@ -4,18 +4,23 @@ using UnityEngine;
 [RequireComponent(typeof(PlayerStats))]
 public class HealthSystem : MonoBehaviour, IAttackable
 {
-    // 1. 체력 변경 시 UI 등에 알릴 이벤트
     public event Action OnHealthChanged;
-    // 2. 사망 시 게임 오버 UI 등에 알릴 이벤트
     public event Action OnDied;
+    public event Action OnDamaged;
 
     private PlayerStats playerStats;
     private float currentHealth;
+    private bool _isDead;
 
-    // IAttackable 인터페이스 구현 및 외부 참조용 프로퍼티
+    [Header("Invincibility")]
+    [SerializeField] private float invincibilityDuration = 0.3f;
+    private float _invincibleUntil;
+
+    public float InvincibilityDuration => invincibilityDuration;
+
     public float CurrentHealth => currentHealth;
-    public bool IsAlive => currentHealth > 0;
-    public int TeamId => 0; 
+    public bool IsAlive => !_isDead && currentHealth > 0f;
+    public int TeamId => 0;
     public Transform Transform => transform;
 
     private void Awake()
@@ -25,7 +30,6 @@ public class HealthSystem : MonoBehaviour, IAttackable
 
     private void Start()
     {
-        // 시작 시 최대 체력으로 초기화
         ReviveFull();
     }
 
@@ -37,53 +41,42 @@ public class HealthSystem : MonoBehaviour, IAttackable
     private void HandleHealthRegen()
     {
         if (!IsAlive) return;
-
         float regen = playerStats.GetStatValue(StatType.HealthRegen);
-        if (regen != 0) 
-        {
-            float maxHealth = playerStats.GetStatValue(StatType.MaxHealth);
-            currentHealth += regen * Time.deltaTime;
-            currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
-            
-            // 체력이 변했으므로 HUD 갱신을 위해 이벤트 호출
+        if (regen == 0f) return;
+        float maxHealth = playerStats.GetStatValue(StatType.MaxHealth);
+        float prev = currentHealth;
+        currentHealth += regen * Time.deltaTime;
+        currentHealth = Mathf.Clamp(currentHealth, 0f, maxHealth);
+        if (Mathf.Abs(currentHealth - prev) > 0.01f)
             OnHealthChanged?.Invoke();
-
-            if (currentHealth <= 0)
-            {
-                Die();
-            }
-        }
     }
 
     public void TakeDamage(float damageAmount)
     {
         if (!IsAlive) return;
-
+        if (Time.time < _invincibleUntil) return;
+        _invincibleUntil = Time.time + invincibilityDuration;
         currentHealth -= damageAmount;
-        currentHealth = Mathf.Max(0, currentHealth);
-        
-        // 데미지를 입었으므로 HUD 갱신을 위해 이벤트 호출
+        currentHealth = Mathf.Max(0f, currentHealth);
         OnHealthChanged?.Invoke();
-
-        if (currentHealth <= 0)
-        {
-            Die();
-        }
+        SoundManager.Instance?.PlayEnemyHit();
+        OnDamaged?.Invoke();
+        if (currentHealth <= 0f) Kill();
     }
 
     public void ReviveFull()
     {
+        _isDead = false;
+        _invincibleUntil = 0f;
         float maxHealth = playerStats.GetStatValue(StatType.MaxHealth);
         currentHealth = maxHealth;
-        
-        // 체력이 가득 찼으므로 HUD 갱신을 위해 이벤트 호출
         OnHealthChanged?.Invoke();
-        Debug.Log("Player Health Restored.");
     }
 
-    private void Die()
+    private void Kill()
     {
+        if (_isDead) return;
+        _isDead = true;
         OnDied?.Invoke();
-        Debug.Log("Player Dead.");
     }
 }

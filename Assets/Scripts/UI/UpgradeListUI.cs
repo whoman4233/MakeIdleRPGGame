@@ -1,41 +1,66 @@
+using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class UpgradeListUI : MonoBehaviour
 {
     public UpgradeManager upgradeManager;
-    public RectTransform contentRoot;     // ScrollView/Viewport/Content
-    public UpgradeItemUI itemPrefab;      // À§¿¡¼­ ¸¸µç ÇÁ¸®ÆÕ
+    public RectTransform contentRoot;
+    public UpgradeItemUI itemPrefab;
+
+    private float _itemHeight = 120f;
+    private float _spacing = 5f;
+    private float _padding = 20f;
 
     private void Start()
     {
         if (upgradeManager == null)
             upgradeManager = UpgradeManager.Instance;
-
         BuildList();
+    }
+
+    private void OnEnable()
+    {
+        if (upgradeManager == null)
+            upgradeManager = UpgradeManager.Instance;
+        if (contentRoot != null && contentRoot.childCount == 0)
+            BuildList();
+        else
+            ResetScroll();
+    }
+
+    private void ResetScroll()
+    {
+        var sr = GetComponentInChildren<ScrollRect>();
+        if (sr != null) sr.normalizedPosition = new Vector2(0f, 1f);
     }
 
     private void BuildList()
     {
         if (upgradeManager == null || contentRoot == null || itemPrefab == null)
         {
-            Debug.LogWarning("[UpgradeListUI] ¼¼ÆÃÀÌ ¾È µÇ¾î ÀÖÀ½");
+            GameLog.Warn("[UpgradeListUI] ì°¸ì¡° ë¯¸ì—°ê²°");
             return;
         }
 
-        // ±âÁ¸ ÀÚ½Äµé Á¤¸®
         for (int i = contentRoot.childCount - 1; i >= 0; i--)
-        {
             Destroy(contentRoot.GetChild(i).gameObject);
-        }
 
-        // ¾÷±×·¹ÀÌµå µ¥ÀÌÅÍ ¸¸Å­ »ý¼º
+        int count = 0;
         for (int i = 0; i < upgradeManager.upgrades.Length; i++)
         {
             var data = upgradeManager.upgrades[i];
             if (data == null) continue;
-
             var item = Instantiate(itemPrefab, contentRoot);
             item.Init(upgradeManager, i);
+            count++;
         }
+
+        // Content ë†’ì´ ìˆ˜ë™ ê³„ì‚° ë° ì„¤ì •
+        float totalHeight = _padding * 2 + count * _itemHeight + (count - 1) * _spacing;
+        contentRoot.sizeDelta = new Vector2(contentRoot.sizeDelta.x, totalHeight);
+
+        // ìŠ¤í¬ë¡¤ ë§¨ ìœ„ë¡œ
+        ResetScroll();
     }
 }

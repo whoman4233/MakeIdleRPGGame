@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 // 에디터에서 우클릭으로 쉽게 데이터를 생성할 수 있도록 메뉴 속성 추가
 [CreateAssetMenu(fileName = "NewEnemyData", menuName = "Anomaly/Enemy Data")]
@@ -23,6 +24,12 @@ public class EnemyStatsData : ScriptableObject
     [Header("Reward")]
     // EXP 시스템이 폐기되었으므로 expReward는 완전히 삭제했습니다.
     public int DropGold = 5;                      // 기존 goldReward (관측 데이터 드랍량)
+
+    [Header("Graft Drop")]
+    [Tooltip("적 사망 시 Graft 드랍 확률 (0~1)")]
+    public float graftDropChance = 0.15f;   // 일반 몹 기본 15%
+    [Tooltip("드랍할 Graft 목록. 비어있으면 드랍 없음")]
+    public List<GraftData> dropGrafts = new List<GraftData>();
 
     [Header("Flags")]
     public bool isBoss = false; 

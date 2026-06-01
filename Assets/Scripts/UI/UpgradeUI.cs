@@ -10,37 +10,72 @@ public class UpgradeUI : MonoBehaviour
     public TextMeshProUGUI levelText;
     public Button upgradeButton;
 
-    private UpgradeManager mgr;
+    private UpgradeManager _mgr;
 
     private void Start()
     {
-        mgr = UpgradeManager.Instance;
+        _mgr = UpgradeManager.Instance;
+        if (_mgr == null)
+        {
+            GameLog.Warn("[UpgradeUI] UpgradeManager 없음", this);
+            if (upgradeButton != null) upgradeButton.interactable = false;
+            return;
+        }
+        if (_mgr.upgrades == null || upgradeIndex >= _mgr.upgrades.Length)
+        {
+            GameLog.Warn($"[UpgradeUI] upgradeIndex {upgradeIndex} 범위 초과", this);
+            gameObject.SetActive(false);
+            return;
+        }
 
-        upgradeButton.onClick.AddListener(OnClick);
+        if (upgradeButton != null)
+            upgradeButton.onClick.AddListener(OnClick);
+
+        if (CurrencyManager.Instance != null)
+            CurrencyManager.Instance.OnCurrencyChanged += RefreshUI;
+
+        // UpgradeManager에서 스탯 변경 알림도 구독 (업그레이드 후 즉시 반영)
+        if (PlayerRef.Instance?.Stats != null)
+            PlayerRef.Instance.Stats.OnStatsChanged += RefreshUI;
 
         RefreshUI();
-        CurrencyManager.Instance.OnCurrencyChanged += RefreshUI;
     }
 
     private void OnDestroy()
     {
-        CurrencyManager.Instance.OnCurrencyChanged -= RefreshUI;
+        if (CurrencyManager.Instance != null)
+            CurrencyManager.Instance.OnCurrencyChanged -= RefreshUI;
+        if (PlayerRef.Instance?.Stats != null)
+            PlayerRef.Instance.Stats.OnStatsChanged -= RefreshUI;
     }
 
     private void OnClick()
     {
-        if (mgr.TryUpgrade(upgradeIndex))
+        if (_mgr == null) return;
+        SoundManager.Instance?.PlayButtonClick();
+        if (_mgr.TryUpgrade(upgradeIndex))
             RefreshUI();
     }
 
     private void RefreshUI()
     {
-        var data = mgr.upgrades[upgradeIndex];
+        if (_mgr == null || _mgr.upgrades == null) return;
+        if (upgradeIndex >= _mgr.upgrades.Length) return;
 
-        titleText.text = data.upgradeName;
-        levelText.text = $"Lv. {data.level}";
-        costText.text = $"{data.GetCurrentCost()} Data";
+        var data = _mgr.upgrades[upgradeIndex];
+        if (data == null) return;
 
-        upgradeButton.interactable = (CurrencyManager.Instance.Data >= data.GetCurrentCost());
+        bool isMaxLevel = data.IsMaxLevel;
+
+        if (titleText  != null) titleText.text  = data.upgradeName;
+        if (levelText  != null) levelText.text  = isMaxLevel ? "MAX" : "Lv. " + data.level;
+        if (costText   != null) costText.text   = isMaxLevel ? "-" : data.GetCurrentCost() + " Data";
+
+        if (upgradeButton != null)
+        {
+            upgradeButton.interactable = !isMaxLevel
+                && CurrencyManager.Instance != null
+                && CurrencyManager.Instance.Data >= data.GetCurrentCost();
+        }
     }
 }

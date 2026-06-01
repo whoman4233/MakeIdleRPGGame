@@ -7,87 +7,53 @@ public class StageHUD : MonoBehaviour
     public TextMeshProUGUI phaseText;
     public TextMeshProUGUI killCountText;
 
-    private StageManager _stageManager;
+    private StageManager _sm;
 
     private void Start()
     {
-        _stageManager = StageManager.Instance;
-        if (_stageManager == null)
-        {
-            Debug.LogWarning("[StageHUD] StageManager ÀÎ½ºÅÏ½º¸¦ Ã£Áö ¸øÇß½À´Ï´Ù.");
-            return;
-        }
+        _sm = StageManager.Instance ?? FindObjectOfType<StageManager>();
+        if (_sm == null) { GameLog.Warn("[StageHUD] StageManager ì—†ìŒ"); return; }
 
-        // ¿©±â¼­ ÀÌº¥Æ® ±¸µ¶
-        _stageManager.OnStageChanged += RefreshAll;
-        _stageManager.OnKillCountChanged += RefreshKillCount;
-        _stageManager.OnPhaseChanged += OnPhaseChanged;
-
-        // ÃÊ±â UI °»½Å
+        _sm.OnStageChanged    += RefreshAll;
+        _sm.OnKillCountChanged += RefreshKillCount;
+        _sm.OnPhaseChanged    += OnPhaseChanged;
         RefreshAll();
     }
 
     private void OnDestroy()
     {
-        if (_stageManager == null) return;
-
-        _stageManager.OnStageChanged -= RefreshAll;
-        _stageManager.OnKillCountChanged -= RefreshKillCount;
-        _stageManager.OnPhaseChanged -= OnPhaseChanged;
+        if (_sm == null) return;
+        _sm.OnStageChanged    -= RefreshAll;
+        _sm.OnKillCountChanged -= RefreshKillCount;
+        _sm.OnPhaseChanged    -= OnPhaseChanged;
     }
 
-    private void RefreshAll()
-    {
-        RefreshStageName();
-        RefreshPhase();
-        RefreshKillCount();
-    }
+    private void RefreshAll() { RefreshStageName(); RefreshPhase(); RefreshKillCount(); }
 
     private void RefreshStageName()
     {
-        if (stageNameText == null || _stageManager == null) return;
-
-        var stage = _stageManager.CurrentStage;
+        if (stageNameText == null || _sm == null) return;
+        var stage = _sm.CurrentStage;
         stageNameText.text = stage != null ? stage.displayName : "No Stage";
     }
 
     private void RefreshPhase()
     {
-        if (phaseText == null || _stageManager == null) return;
-
-        phaseText.text = _stageManager.CurrentPhase.ToString();
+        if (phaseText == null || _sm == null) return;
+        phaseText.text = _sm.CurrentPhase.ToString();
     }
 
     private void RefreshKillCount()
     {
-        if (killCountText == null || _stageManager == null) return;
-
-        var stage = _stageManager.CurrentStage;
-        if (stage == null)
-        {
-            killCountText.text = "-";
-            return;
-        }
-
-        int cur = _stageManager.GetCurrentKillCount();
+        if (killCountText == null || _sm == null) return;
+        var stage = _sm.CurrentStage;
+        if (stage == null) { killCountText.text = "-"; return; }
+        int cur  = _sm.GetCurrentKillCount();
         int need = stage.normalKillToSummonBoss;
-
-        // µğ¹ö±×¿ë ·Î±× ÇÑ ¹ø
-        // Debug.Log($"[StageHUD] RefreshKillCount: {cur}/{need}, phase={_stageManager.CurrentPhase}");
-
-        if (_stageManager.CurrentPhase == StagePhase.Boss || need <= 0)
-        {
-            killCountText.text = $"{cur}";
-        }
-        else
-        {
-            killCountText.text = $"{cur} / {need}";
-        }
+        killCountText.text = (_sm.CurrentPhase == StagePhase.Boss || need <= 0)
+            ? cur.ToString()
+            : cur + " / " + need;
     }
 
-    private void OnPhaseChanged(StagePhase phase)
-    {
-        RefreshPhase();
-        RefreshKillCount();
-    }
+    private void OnPhaseChanged(StagePhase phase) { RefreshPhase(); RefreshKillCount(); }
 }

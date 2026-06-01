@@ -1,34 +1,33 @@
-using System.Collections;
+﻿using System.Collections;
 using UnityEngine;
 
 public class AttackState : IPlayerState
 {
     private PlayerController _c;
-    private MonoBehaviour _host;
-    private Coroutine _attackRoutine;
+    private MonoBehaviour    _host;
+    private Coroutine        _attackRoutine;
 
     public void Enter(PlayerController controller)
     {
-        _c = controller;
+        _c    = controller;
         _host = controller;
         StartAttackLoop();
     }
 
     public void Tick()
-{
-    if (_c.CurrentTarget == null || !_c.CurrentTarget.IsAlive)
     {
-        _c.ChangeState(PlayerStateType.MoveForward); // 타겟 없으면 헛스윙(대기)
-        return;
-    }
+        // 매 틱마다 타겟 재탐색 — 보스 스폰 즉시 전환 대응
+        var newTarget = _c.FindTarget();
+        if (newTarget != null) _c.CurrentTarget = newTarget;
 
-    float dist = _c.DistanceToTarget();
-    if (dist > _c.attackRange * 1.2f)
-    {
-        // 런닝머신이므로 Chase(추적)하지 않고, 다시 MoveForward(대기)로 돌아가서 다가오길 기다림
-        _c.ChangeState(PlayerStateType.MoveForward); 
+        if (_c.CurrentTarget == null || !_c.CurrentTarget.IsAlive)
+        {
+            _c.ChangeState(PlayerStateType.MoveForward);
+            return;
+        }
+        if (_c.DistanceToTarget() > _c.attackRange * 1.2f)
+            _c.ChangeState(PlayerStateType.MoveForward);
     }
-}
 
     public void Exit()
     {
@@ -42,16 +41,14 @@ public class AttackState : IPlayerState
     private void StartAttackLoop()
     {
         if (_host == null) return;
-
-        if (_attackRoutine != null)
-            _host.StopCoroutine(_attackRoutine);
-
+        if (_attackRoutine != null) _host.StopCoroutine(_attackRoutine);
         _attackRoutine = _host.StartCoroutine(AttackLoop());
     }
 
     private IEnumerator AttackLoop()
     {
-        while (true)
+        bool running = true;
+        while (running)
         {
             if (_c.CurrentTarget == null || !_c.CurrentTarget.IsAlive)
             {
@@ -60,26 +57,54 @@ public class AttackState : IPlayerState
             }
 
             Vector3 toTarget = _c.CurrentTarget.Transform.position - _c.transform.position;
-            
-            // 2.5D 보정: Z축, Y축 무시
-            toTarget.y = 0f;
-            toTarget.z = 0f; 
-
+            toTarget.y = 0f; toTarget.z = 0f;
             if (_c.modelRoot != null && toTarget != Vector3.zero)
                 _c.modelRoot.rotation = Quaternion.LookRotation(toTarget);
 
-            // [변경점] AttackState 내부에서 직접 스탯을 읽어와서 공격을 실행합니다.
-            // Stats.GetStat() 또는 GetStatValue() 등 선언하신 메서드명에 맞게 호출
-            float finalDamage = _c.Stats.GetStatValue(StatType.AttackPower);
-            _c.CurrentTarget.TakeDamage(finalDamage);
-            
-            Debug.Log($"[AttackState] 적에게 {finalDamage} 데미지 타격!");
+            float baseDamage = Mathf.Max(1f, _c.Stats.GetStatValue(StatType.AttackPower));
+            float critChance = _c.Stats.GetStatValue(StatType.CriticalChance);
+            bool  isCrit     = UnityEngine.Random.value < critChance;
+            float finalDmg   = isCrit ? baseDamage * 2f : baseDamage;
 
-            // 공격 속도 로직 (메서드명 주의)
-            float currentAttackSpeed = _c.Stats.GetStatValue(StatType.AttackSpeed);
-            float attackInterval = 1f / Mathf.Max(0.1f, currentAttackSpeed);
+            var registry = AttackableRegistry.Instance;
+            int hitCount = 0;
 
-            yield return new WaitForSeconds(attackInterval);
+            if (registry != null)
+            {
+                var nearTargets = registry.GetEnemiesInRange(_c.transform.position, _c.attackRange);
+                for (int i = 0; i < nearTargets.Count; i++)
+                {
+                    var t = nearTargets[i];
+                    if (t == null || !t.IsAlive) continue;
+                    t.TakeDamage(finalDmg);
+                    hitCount++;
+                }
+                if (hitCount == 0 && _c.CurrentTarget != null)
+                {
+                    _c.CurrentTarget.TakeDamage(finalDmg);
+                    hitCount++;
+                }
+            }
+            else
+            {
+                if (_c.CurrentTarget != null)
+                {
+                    _c.CurrentTarget.TakeDamage(finalDmg);
+                    hitCount++;
+                }
+            }
+
+            if (hitCount > 0)
+            {
+                SoundManager.Instance?.PlayEnemyHit();
+                if (_c.CurrentTarget != null)
+                    DamagePopupManager.Instance?.Show(
+                        _c.CurrentTarget.Transform.position, finalDmg, isCrit);
+            }
+
+            float spd      = _c.Stats.GetStatValue(StatType.AttackSpeed);
+            float interval = 1f / Mathf.Max(0.1f, spd);
+            yield return new WaitForSeconds(interval);
         }
     }
 }
