@@ -29,6 +29,10 @@ public class SoundManager : MonoBehaviour
     public AudioClip sfxEnemyDeath;
     public AudioClip sfxPlayerHit;
 
+    [Header("랜덤 풀")]
+    public AudioClip[] goreSfx;     // 전투 피격/사망 랜덤 재생 (gore-*)
+    public AudioClip[] bgmTracks;   // BGM 랜덤 재생 풀
+
     [Header("SFX Event - Assets/Audio/SFX/Event/")]
     public AudioClip sfxBossWarning;
     public AudioClip sfxStageUp;
@@ -62,7 +66,7 @@ public class SoundManager : MonoBehaviour
         // 저장된 볼륨 설정 불러오기
         bgmVolume = PlayerPrefs.GetFloat("BGMVolume", bgmVolume);
         sfxVolume = PlayerPrefs.GetFloat("SFXVolume", sfxVolume);
-        PlayBGM(bgmAmbient);
+        PlayRandomBGM();
     }
 
     public void PlayBGM(AudioClip clip)
@@ -140,10 +144,30 @@ public class SoundManager : MonoBehaviour
         // AOE 다중 적중 시 0.05초 이내 중복 재생 방지
         if (Time.time - _lastEnemyHitTime < 0.05f) return;
         _lastEnemyHitTime = Time.time;
-        PlaySFX(sfxEnemyHit);
+        PlaySFX(PickGore(sfxEnemyHit));
     }
-    public void PlayEnemyDeath()  => PlaySFX(sfxEnemyDeath);
-    public void PlayPlayerHit()   => PlaySFX(sfxPlayerHit);
+    public void PlayEnemyDeath()  => PlaySFX(PickGore(sfxEnemyDeath));
+    public void PlayPlayerHit()   => PlaySFX(PickGore(sfxPlayerHit));
     public void PlayBossWarning() { PlaySFX(sfxBossWarning); PlayBGM(bgmBossAlert); }
     public void PlayStageUp()     => PlaySFX(sfxStageUp);
+
+    private AudioClip PickGore(AudioClip fallback)
+    {
+        if (goreSfx != null && goreSfx.Length > 0)
+        {
+            var c = goreSfx[UnityEngine.Random.Range(0, goreSfx.Length)];
+            if (c != null) return c;
+        }
+        return fallback;
+    }
+
+    public void PlayRandomBGM()
+    {
+        if (bgmTracks != null && bgmTracks.Length > 0)
+        {
+            var c = bgmTracks[UnityEngine.Random.Range(0, bgmTracks.Length)];
+            if (c != null) { PlayBGM(c); return; }
+        }
+        PlayBGM(bgmAmbient);
+    }
 }

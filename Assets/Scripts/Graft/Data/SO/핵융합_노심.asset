@@ -1,3 +1,29 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:bdf0b2fa63238c279928b04f156a52f38df709ccc7fa15ddffe3a887f2bfab76
-size 963
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d27dda005649d640afafc6945b96760, type: 3}
+  m_Name: "\uD575\uC735\uD569_\uB178\uC2EC"
+  m_EditorClassIdentifier: 
+  graftName: "\uD575\uC735\uD569_\uB178\uC2EC"
+  description: "\uD575\uC5D0\uB108\uC9C0 \uB178\uC2EC \uC774\uC2DD. \uACF5\uACA9\uB825/\uACF5\uACA9\uC18D\uB3C4
+    \uBAA8\uB450 \uC0C1\uC2B9."
+  slotType: 1
+  icon: {fileID: 21300000, guid: 26cc49bf34f904a4c93e20aac89bd552, type: 3}
+  appearanceSprite: {fileID: 21300000, guid: 26cc49bf34f904a4c93e20aac89bd552, type: 3}
+  appearanceColor: {r: 1, g: 1, b: 1, a: 1}
+  coreSkill: {fileID: 0}
+  modifiers:
+  - statType: 0
+    value: 0.4
+    type: 200
+  - statType: 1
+    value: 0.2
+    type: 200

@@ -100,11 +100,12 @@ public class PlayerGraft : MonoBehaviour
     private void ApplyGraftModifiers(GraftData graft)
     {
         if (graft == null || graft.modifiers == null) return;
+        float graftMult = GraftEnhanceManager.Instance != null ? GraftEnhanceManager.Instance.GetMultiplier(graft) : 1f;
         foreach (var mod in graft.modifiers)
         {
             Stat targetStat = stats.GetStat(mod.statType);
             if (targetStat != null)
-                targetStat.AddModifier(new StatModifier(mod.statType, mod.value, mod.type, graft));
+                targetStat.AddModifier(new StatModifier(mod.statType, mod.value * graftMult, mod.type, graft));
         }
     }
 

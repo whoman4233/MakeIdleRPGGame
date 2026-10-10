@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 23494d3ca87f8c24491420869122f877, type: 3}
+  m_Name: DepthMilestoneTable
+  m_EditorClassIdentifier: 
+  milestones:
+  - depth: 5
+    label: 
+    dataReward: 5000
+    coreReward: 0
+  - depth: 10
+    label: "\uCCAB \uC21C\uD658 \uC644\uB8CC"
+    dataReward: 0
+    coreReward: 5
+  - depth: 20
+    label: 
+    dataReward: 0
+    coreReward: 10
+  - depth: 30
+    label: 
+    dataReward: 0
+    coreReward: 15
+  - depth: 50
+    label: 
+    dataReward: 0
+    coreReward: 25
+  - depth: 75
+    label: 
+    dataReward: 0
+    coreReward: 40
+  - depth: 100
+    label: "\uC2EC\uC5F0 \uB3C4\uB2EC"
+    dataReward: 0
+    coreReward: 60

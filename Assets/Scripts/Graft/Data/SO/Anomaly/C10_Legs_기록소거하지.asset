@@ -1,3 +1,31 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:ec1ca013b84101da09b2c152c564d3e3173c00674036bab03a4b4d69c17d50b6
-size 1139
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d27dda005649d640afafc6945b96760, type: 3}
+  m_Name: "C10_Legs_\uAE30\uB85D\uC18C\uAC70\uD558\uC9C0"
+  m_EditorClassIdentifier: 
+  graftName: "\uAE30\uB85D \uC18C\uAC70 \uD558\uC9C0"
+  description: "\uC774\uB3D9 \uC790\uCCB4\uAC00 \uD604\uC2E4\uC5D0\uC11C \uC9C0\uC6CC\uC9C0\uB294
+    \uD558\uC9C0. \uACF5\uACA9 \uC18D\uB3C4\uAC00 \uBCF5\uD569 \uBE44\uC728\uB85C
+    \uADF9\uB2E8\uC801\uC73C\uB85C \uC0C1\uC2B9\uD558\uB098 \uACF5\uACA9\uB825\uC774
+    \uAC10\uC18C\uD55C\uB2E4."
+  slotType: 4
+  icon: {fileID: 21300000, guid: 64533cd7eede6d841a3019e48fa000fa, type: 3}
+  appearanceSprite: {fileID: 21300000, guid: 64533cd7eede6d841a3019e48fa000fa, type: 3}
+  appearanceColor: {r: 1, g: 1, b: 1, a: 1}
+  coreSkill: {fileID: 0}
+  modifiers:
+  - statType: 1
+    value: 0.45
+    type: 300
+  - statType: 0
+    value: -0.15
+    type: 200

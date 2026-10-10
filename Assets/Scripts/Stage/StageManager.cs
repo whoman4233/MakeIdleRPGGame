@@ -21,6 +21,7 @@ public class StageManager : MonoBehaviour
     [SerializeField] private int currentKillCount;
     [SerializeField] private StagePhase currentPhase = StagePhase.Normal;
     [SerializeField] private int endlessLoopCount;   // 몇 번 반복했는지
+    [SerializeField] private int bestDepth;          // 최고 도달 심층 기록
 
     public StageData CurrentStage =>
         (stages != null && stages.Length > 0 &&
@@ -30,6 +31,12 @@ public class StageManager : MonoBehaviour
     public StagePhase CurrentPhase  => currentPhase;
     public int CurrentStageIndex    => currentStageIndex;
     public int EndlessLoopCount     => endlessLoopCount;
+    public int BestDepth            => bestDepth;
+    /// <summary>현재 심층 깊이 = 엔드리스 루프 × 스테이지 수 + 현재 스테이지 인덱스</summary>
+    public int CurrentDepth =>
+        (stages != null && stages.Length > 0)
+            ? endlessLoopCount * stages.Length + currentStageIndex
+            : currentStageIndex;
 
     public event Action              OnStageChanged;
     public event Action              OnKillCountChanged;
@@ -69,6 +76,7 @@ public class StageManager : MonoBehaviour
         index = Mathf.Clamp(index, 0, stages.Length - 1);
         currentStageIndex = index;
         currentKillCount  = 0;
+        UpdateBestDepth();
         SetPhaseInternal(StagePhase.Normal, invokeStageChanged: true);
     }
 
@@ -148,4 +156,18 @@ public class StageManager : MonoBehaviour
     {
         if (paused) SaveManager.Instance?.SaveGame();
     }
+    /// <summary>세이브에서 무한 심층 진행도를 복원한다. (SetStage보다 먼저 호출)</summary>
+    public void LoadEndlessProgress(int loopCount, int savedBestDepth)
+    {
+        endlessLoopCount = Mathf.Max(0, loopCount);
+        bestDepth = Mathf.Max(bestDepth, savedBestDepth);
+    }
+
+    /// <summary>현재 깊이가 기존 최고 기록보다 깊으면 기록을 갱신한다.</summary>
+    private void UpdateBestDepth()
+    {
+        if (CurrentDepth > bestDepth)
+            bestDepth = CurrentDepth;
+    }
+
 }

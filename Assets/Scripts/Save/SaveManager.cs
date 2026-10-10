@@ -68,6 +68,17 @@ public class SaveManager : MonoBehaviour
     // =========================================================
 
     [ContextMenu("게임 저장 (SaveGame)")]
+    // 모바일: 백그라운드 전환/종료 시 자동 저장 (오프라인 보상의 기준 시각 기록)
+    private void OnApplicationPause(bool paused)
+    {
+        if (paused) SaveGame();
+    }
+
+    private void OnApplicationQuit()
+    {
+        SaveGame();
+    }
+
     public void SaveGame()
     {
         try
@@ -86,6 +97,9 @@ public class SaveManager : MonoBehaviour
     private SaveData CollectSaveData()
     {
         var data = new SaveData();
+
+        // 오프라인 보상용: 저장 시각(UTC) 기록
+        data.lastSaveTimeUtc = System.DateTime.UtcNow.ToString("o");
 
         // 재화
         if (CurrencyManager.Instance != null)
@@ -126,7 +140,19 @@ public class SaveManager : MonoBehaviour
 
         // 스테이지
         if (StageManager.Instance != null)
+        {
             data.currentStageIndex = StageManager.Instance.CurrentStageIndex;
+            data.endlessLoopCount  = StageManager.Instance.EndlessLoopCount;
+            data.bestDepth         = StageManager.Instance.BestDepth;
+        }
+        // 무한 심층 마일스톤 수령 기록
+        if (DepthMilestoneManager.Instance != null)
+            data.claimedDepthMilestones = DepthMilestoneManager.Instance.GetClaimedDepths();
+
+        // 부위 강화 레벨
+        if (GraftEnhanceManager.Instance != null)
+            GraftEnhanceManager.Instance.GetSaveData(data.graftEnhanceIds, data.graftEnhanceLevels);
+
 
         // 추출 횟수 (비용 곡선)
         if (ExtractionManager.Instance != null)
@@ -166,8 +192,12 @@ public class SaveManager : MonoBehaviour
         }
     }
 
+    /// <summary>가장 최근에 로드된 세이브 데이터 (오프라인 보상 계산용). 세이브가 없으면 null.</summary>
+    public SaveData LastLoadedData { get; private set; }
+
     private void ApplySaveData(SaveData data)
     {
+        LastLoadedData = data;
         // 재화
         CurrencyManager.Instance?.LoadValues(data.dataAmount, data.coreAmount);
 
@@ -187,6 +217,9 @@ public class SaveManager : MonoBehaviour
         }
 
         // 장착 슬롯
+        // 부위 강화 레벨 (LoadEquipped 의 스탯 재적용보다 먼저 로드)
+        GraftEnhanceManager.Instance?.LoadLevels(data.graftEnhanceIds, data.graftEnhanceLevels);
+
         _playerGraft?.LoadEquipped(
             graftRegistry.Find(data.equippedHead),
             graftRegistry.Find(data.equippedCore),
@@ -199,7 +232,11 @@ public class SaveManager : MonoBehaviour
         UpgradeManager.Instance?.LoadUpgradeLevels(data.upgradeLevels);
 
         // 스테이지 (SetStage는 StageManager 내부에서 초기화까지 처리)
+        StageManager.Instance?.LoadEndlessProgress(data.endlessLoopCount, data.bestDepth);
         StageManager.Instance?.SetStage(data.currentStageIndex);
+        // 무한 심층 마일스톤 (StageManager 로드 후 → BestDepth 반영된 상태에서 복원)
+        DepthMilestoneManager.Instance?.LoadClaimed(data.claimedDepthMilestones);
+
 
         // 추출 횟수 (비용 곡선)
         ExtractionManager.Instance?.LoadExtractionCount(data.basicExtractionCount);
